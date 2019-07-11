@@ -32,20 +32,11 @@ if(is_null($tsInf)) {
 	tLog('Overall Metrics page: no test cases defined');
 } else {
 
-  // order is not important for GUI
-  //$items2loop = array('testsuites');
-
-  //echo '<pre>';
-  //var_dump('tsi',$tsInf->info);
-  //echo '</pre>';
-  //die();
-
 	// do report
 	$gui->statistics->testsuites = $tsInf->info;
 	$gui->do_report['status_ok'] = 1;
 	$gui->do_report['msg'] = '';
 
-	// $items2loop = array('testsuites','keywords');
 	$keywordsMetrics = 
     $metricsMgr->getStatusTotalsByKeywordForRender($args->tplan_id,null, array('groupByPlatform' => $gui->showPlatforms) );
 	$gui->statistics->keywords = !is_null($keywordsMetrics) ? $keywordsMetrics->info : null; 
@@ -109,6 +100,19 @@ if(is_null($tsInf)) {
 		$gui->statistics->overallBuildStatus = $metricsMgr->getOverallBuildStatusForRender($args->tplan_id);
 		$gui->displayBuildMetrics = !is_null($gui->statistics->overallBuildStatus);
 	}  
+
+  // Build by Platform
+  $colDefinition = null;
+  $results = null;
+  if($gui->do_report['status_ok']) {
+    $gui->statistics->buildByPlatStatus = 
+      $metricsMgr->getBuildByPlatStatusForRender($args->tplan_id);
+      
+    $gui->displayBuildByPlatStatus = 
+      !is_null($gui->statistics->buildByPlatStatus);
+  }  
+
+
 	
   /* MILESTONE & PRIORITY REPORT */
 	$milestonesList = $tplan_mgr->get_milestones($args->tplan_id);

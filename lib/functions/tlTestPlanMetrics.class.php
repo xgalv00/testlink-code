@@ -280,77 +280,77 @@ class tlTestPlanMetrics extends testplan
    *               'getPlatformSet' => false, 'processClosedBuilds' => true);
    *  filters => array('buildSet' => null);
    *
-   * @internal revisions
-   * @since 1.9.12
-   * 20140819 - test case exec assignment to MULTIPLE TESTERS
-   *
    */
-  function getExecCountersByBuildExecStatus($id, $filters=null, $opt=null)
-  {
+  function getExecCountersByBuildExecStatus($id, $filters=null, $opt=null) {
     $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
     $safe_id = intval($id);
-    list($my,$builds,$sqlStm) = $this->helperGetExecCounters($safe_id, $filters, $opt);
+    list($my,$builds,$sqlStm) = 
+      $this->helperGetExecCounters($safe_id, $filters, $opt);
     
+    $fields = "";    
+    if( $my['opt']['groupByPlatform'] ) {
+      $fields = ",platform_id";
+    }
 
     // This subquery is BETTER than the VIEW, need to understand why
     // Last Executions By Build and Platform (LEBBP)
     $sqlLEBBP =  $sqlStm['LEBBP'];
 
     $sqlUnionAB  =  "/* {$debugMsg} sqlUnionAB - executions */" . 
-                  " SELECT DISTINCT UA.build_id, TPTCV.tcversion_id, TPTCV.platform_id, " . 
-                  " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
-                  " FROM {$this->tables['testplan_tcversions']} TPTCV " .
-                  " JOIN {$this->tables['user_assignments']} UA " .
-                  " ON UA.feature_id = TPTCV.id " .
-                  " AND UA.build_id IN ({$builds->inClause}) AND UA.type = {$this->execTaskCode} " .
+      " SELECT DISTINCT UA.build_id, TPTCV.tcversion_id, TPTCV.platform_id, " . 
+      " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
+      " FROM {$this->tables['testplan_tcversions']} TPTCV " .
+      " JOIN {$this->tables['user_assignments']} UA " .
+      " ON UA.feature_id = TPTCV.id " .
+      " AND UA.build_id IN ({$builds->inClause}) AND UA.type = {$this->execTaskCode} " .
 
-                  " /* GO FOR Absolute LATEST exec ID ON BUILD and PLATFORM */ " .
-                  " JOIN ({$sqlLEBBP}) AS LEBBP " .
-                  " ON  LEBBP.testplan_id = TPTCV.testplan_id " .
-                  " AND LEBBP.platform_id = TPTCV.platform_id " .
-                  " AND LEBBP.tcversion_id = TPTCV.tcversion_id " .
-                  " AND LEBBP.testplan_id = " . $safe_id .
+      " /* GO FOR Absolute LATEST exec ID ON BUILD and PLATFORM */ " .
+      " JOIN ({$sqlLEBBP}) AS LEBBP " .
+      " ON  LEBBP.testplan_id = TPTCV.testplan_id " .
+      " AND LEBBP.platform_id = TPTCV.platform_id " .
+      " AND LEBBP.tcversion_id = TPTCV.tcversion_id " .
+      " AND LEBBP.testplan_id = " . $safe_id .
 
-                  " /* Get execution status WRITTEN on DB */ " .
-                  " JOIN {$this->tables['executions']} E " .
-                  " ON  E.id = LEBBP.id " .
-                  " AND E.build_id = UA.build_id " .
-      
-                  " WHERE TPTCV.testplan_id=" . $safe_id .
-                  " AND UA.build_id IN ({$builds->inClause}) ";
+      " /* Get execution status WRITTEN on DB */ " .
+      " JOIN {$this->tables['executions']} E " .
+      " ON  E.id = LEBBP.id " .
+      " AND E.build_id = UA.build_id " .
+
+      " WHERE TPTCV.testplan_id=" . $safe_id .
+      " AND UA.build_id IN ({$builds->inClause}) ";
       
     $sqlUnionBB  =  "/* {$debugMsg} sqlUnionBB - NOT RUN */" . 
-                   " SELECT DISTINCT UA.build_id, TPTCV.tcversion_id, TPTCV.platform_id, " . 
-                  " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
-                  " FROM {$this->tables['testplan_tcversions']} TPTCV " .
-                  " JOIN {$this->tables['user_assignments']} UA " .
-                  " ON UA.feature_id = TPTCV.id " .
-                  " AND UA.build_id IN ({$builds->inClause}) AND UA.type = {$this->execTaskCode} " .
+      " SELECT DISTINCT UA.build_id, TPTCV.tcversion_id, TPTCV.platform_id, " . 
+      " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
+      " FROM {$this->tables['testplan_tcversions']} TPTCV " .
+      " JOIN {$this->tables['user_assignments']} UA " .
+      " ON UA.feature_id = TPTCV.id " .
+      " AND UA.build_id IN ({$builds->inClause}) AND UA.type = {$this->execTaskCode} " .
 
-                  " /* Get REALLY NOT RUN => BOTH LE.id AND E.id ON LEFT OUTER see WHERE  */ " .
-                  " LEFT OUTER JOIN ({$sqlLEBBP}) AS LEBBP " .
-                  " ON  LEBBP.testplan_id = TPTCV.testplan_id " .
-                  " AND LEBBP.platform_id = TPTCV.platform_id " .
-                  " AND LEBBP.tcversion_id = TPTCV.tcversion_id " .
+      " /* Get REALLY NOT RUN => BOTH LE.id AND E.id ON LEFT OUTER see WHERE  */ " .
+      " LEFT OUTER JOIN ({$sqlLEBBP}) AS LEBBP " .
+      " ON  LEBBP.testplan_id = TPTCV.testplan_id " .
+      " AND LEBBP.platform_id = TPTCV.platform_id " .
+      " AND LEBBP.tcversion_id = TPTCV.tcversion_id " .
 
-                  // Without this I've created issue 5272
-                  " AND LEBBP.build_id = UA.build_id " .
+      // Without this I've created issue 5272
+      " AND LEBBP.build_id = UA.build_id " .
 
-                  " AND LEBBP.testplan_id = " . $safe_id .
-                  " LEFT OUTER JOIN {$this->tables['executions']} E " .
-                  " ON  E.tcversion_id = TPTCV.tcversion_id " .
-                  " AND E.testplan_id = TPTCV.testplan_id " .
-                  " AND E.platform_id = TPTCV.platform_id " .
+      " AND LEBBP.testplan_id = " . $safe_id .
+      " LEFT OUTER JOIN {$this->tables['executions']} E " .
+      " ON  E.tcversion_id = TPTCV.tcversion_id " .
+      " AND E.testplan_id = TPTCV.testplan_id " .
+      " AND E.platform_id = TPTCV.platform_id " .
 
-                  // Without this I've created issue 5272
-                  " AND E.build_id = LEBBP.build_id " .
+      // Without this I've created issue 5272
+      " AND E.build_id = LEBBP.build_id " .
 
-                  " /* FILTER BUILDS in set on target test plan (not alway can be applied) */ " .
-                  " WHERE TPTCV.testplan_id=" . $safe_id . 
-                  " AND UA.build_id IN ({$builds->inClause}) " .
-  
-                  " /* Get REALLY NOT RUN => BOTH LE.id AND E.id NULL  */ " .
-                  " AND E.id IS NULL AND LEBBP.id IS NULL";
+      " /* FILTER BUILDS in set on target test plan (not alway can be applied) */ " .
+      " WHERE TPTCV.testplan_id=" . $safe_id . 
+      " AND UA.build_id IN ({$builds->inClause}) " .
+
+      " /* Get REALLY NOT RUN => BOTH LE.id AND E.id NULL  */ " .
+      " AND E.id IS NULL AND LEBBP.id IS NULL";
       
 
     // 20140819 - I've not documented why I've use UNION ALL
@@ -360,43 +360,94 @@ class tlTestPlanMetrics extends testplan
     // My choice was: add DISTINCT to each union piece.
     // May be is a wrong choice, but I need to read and test more to understand  
     $sql =  " /* {$debugMsg} UNION WITH ALL CLAUSE */" .
-            " SELECT build_id,status, count(0) AS exec_qty " .
+            " SELECT count(0) AS exec_qty, build_id,status $fields " .
             " FROM ($sqlUnionAB UNION ALL $sqlUnionBB ) AS SQBU " .
-            " GROUP BY build_id,status ";
-    $exec['with_tester'] = (array)$this->db->fetchMapRowsIntoMap($sql,'build_id','status');              
+            " GROUP BY build_id,status $fields";
+    // 366
+    if( $my['opt']['groupByPlatform'] ) {
+      $kol = array('platform_id','build_id','status');
+      $exec['with_tester'] = 
+        (array)$this->db->fetchRowsIntoMap3l($sql,$kol);
 
-    // Need to Add info regarding:
-    // - Add info for ACTIVE BUILD WITHOUT any execution. ???
-    //   Hmm, think about Need to check is this way is better that request DBMS to do it.
-    // - Execution status that have not happened
-    foreach($exec as &$elem)
-    {                             
-      $itemSet = array_keys($elem);
-      foreach($itemSet as $itemID)
-      {
-        foreach($this->statusCode as $verbose => $code)
-        {
-          if(!isset($elem[$itemID][$code]))
-          {
-            $elem[$itemID][$code] = array('build_id' => $itemID,'status' => $code, 'exec_qty' => 0);      
-          }                           
+      // Need to Add info regarding:
+      // - Add info for ACTIVE BUILD WITHOUT any execution. ???
+      //   Hmm, think about Need to check is this way is better that request DBMS to do it.
+      // - Execution status that have not happened
+      foreach($exec as $dum => &$elem) {                            
+        $platSet = array_keys($elem);
+        foreach($platSet as $platId ) {
+          $itemSet = array_keys($elem[$platId]);
+          foreach($itemSet as $itemID) {
+            foreach($this->statusCode as $verbose => $code) {
+              if(!isset($elem[$platId][$itemID][$code])) {
+                $elem[$platId][$itemID][$code] = 
+                  array('build_id' => $itemID,'status' => $code, 'exec_qty' => 0);
+              }                           
+            }
+          }
         }
       }
-    }
-    
+    } else {
+      $exec['with_tester'] = 
+        (array)$this->db->fetchMapRowsIntoMap($sql,'build_id','status');      
+      // Need to Add info regarding:
+      // - Add info for ACTIVE BUILD WITHOUT any execution. ???
+      //   Hmm, think about Need to check is this way is better that request DBMS to do it.
+      // - Execution status that have not happened
+      foreach($exec as &$elem) {                             
+        $itemSet = array_keys($elem);
+        foreach($itemSet as $itemID) {
+          foreach($this->statusCode as $verbose => $code) {
+            if(!isset($elem[$itemID][$code])) {
+              $elem[$itemID][$code] = 
+                array('build_id' => $itemID,'status' => $code, 'exec_qty' => 0);
+            }                           
+          }
+        }
+      }
+    }       
+              
     // get total assignments by BUILD ID
-    // 20140819 - changes due to test case exec assignment to MULTIPLE TESTERS
-    $sql =  "/* $debugMsg */ ".
-            " SELECT COUNT(0) AS qty, TT.build_id FROM ( " .
-            " SELECT DISTINCT UA.build_id, UA.feature_id " . 
-            " FROM {$this->tables['user_assignments']} UA " .
-            " JOIN {$this->tables['testplan_tcversions']} TPTCV ON TPTCV.id = UA.feature_id " .
-            " WHERE UA. build_id IN ( " . $builds->inClause . " ) " .
-            " AND UA.type = {$this->execTaskCode} " . 
-            " GROUP BY build_id,feature_id) TT " .
-            " GROUP BY build_id ";
+    // changes due to test case exec assignment to MULTIPLE TESTERS
 
-    $exec['total'] = (array)$this->db->fetchRowsIntoMap($sql,'build_id');
+    if( $my['opt']['groupByPlatform'] ) {
+
+      $sql = " /* $debugMsg */ 
+               SELECT COUNT(0) AS qty, TT.build_id, TT.platform_id 
+                FROM ( 
+                  SELECT DISTINCT UA.build_id, UA.feature_id,
+                  TPTCV.platform_id  
+                  FROM {$this->tables['user_assignments']} UA
+                  JOIN {$this->tables['testplan_tcversions']} TPTCV 
+                  ON TPTCV.id = UA.feature_id 
+                  WHERE UA. build_id IN ( {$builds->inClause} )
+                  AND UA.type = {$this->execTaskCode} 
+                  GROUP BY build_id,feature_id, platform_id
+                ) TT 
+                GROUP BY build_id, platform_id ";
+
+      $exec['total'] = 
+        (array)$this->db->fetchMapRowsIntoMap(
+                 $sql,'platform_id','build_id');
+
+    } else {  
+      $sql = " /* $debugMsg */ 
+               SELECT COUNT(0) AS qty, TT.build_id 
+                FROM ( 
+                  SELECT DISTINCT UA.build_id, UA.feature_id 
+                  FROM {$this->tables['user_assignments']} UA
+                  JOIN {$this->tables['testplan_tcversions']} TPTCV 
+                  ON TPTCV.id = UA.feature_id 
+                  WHERE UA. build_id IN ( {$builds->inClause} )
+                  AND UA.type = {$this->execTaskCode} 
+                  GROUP BY build_id,feature_id
+                ) TT 
+                GROUP BY build_id ";
+
+     $exec['total'] = 
+       (array)$this->db->fetchRowsIntoMap($sql,'build_id');
+    }
+
     $exec['active_builds'] = $builds->infoSet;
 
     return $exec;
@@ -405,19 +456,15 @@ class tlTestPlanMetrics extends testplan
                                       
   /**
    *
-   * @internal revisions
    *
-   * @since 1.9.4
    **/
-  function getOverallBuildStatusForRender($id, $totalKey='total_assigned')
-  {
+  function getOverallBuildStatusForRender($id, $totalKey='total_assigned') {
     $renderObj = null;
     $code_verbose = $this->getStatusForReports();
     $labels = $this->resultsCfg['status_label'];
       
     $metrics = $this->getExecCountersByBuildExecStatus($id);
-    if( !is_null($metrics) )
-    {
+    if( !is_null($metrics) ) {
        $renderObj = new stdClass();
 
       // Creating item list this way will generate a row also for
@@ -856,7 +903,6 @@ class tlTestPlanMetrics extends testplan
     
     if( $my['opt']['groupByPlatform'] ) {
       $kol = array('platform_id','urg_imp','status');
-      echo $sql;
       $rs = (array)$this->db->fetchRowsIntoMap3l($sql,$kol);
     } else {
       $rs = $this->db->get_recordset($sql);
@@ -1353,8 +1399,6 @@ class tlTestPlanMetrics extends testplan
   function getStatusTotalsByTopLevelTestSuiteForRender($id,$filters=null,$opt=null)
   {
 
-    var_dump(__FUNCTION__,$opt);
-    echo '<br>';
     list($rObj,$staircase) = $this->getStatusTotalsByItemForRender($id,'tsuite',$filters,$opt);
 
     //echo '<pre>';
@@ -2861,5 +2905,62 @@ class tlTestPlanMetrics extends testplan
     $out['total'] = $totalByMatrix;
   }
   
+  /**
+   *
+   *
+   **/
+  function getBuildByPlatStatusForRender($id, $totalKey='total_assigned') {
 
+    $renderObj = null;
+    $code_verbose = $this->getStatusForReports();
+    $labels = $this->resultsCfg['status_label'];
+    
+    $opt = array('groupByPlatform' => true);  
+    $metrics = $this->getExecCountersByBuildExecStatus($id,null,$opt);
+
+    if( !is_null($metrics) ) {
+       $renderObj = new stdClass();
+
+      // Creating item list this way will generate a row also for
+      // ACTIVE BUILDS were ALL TEST CASES HAVE NO TESTER ASSIGNMENT
+      // $buildList = array_keys($metrics['active_builds']);
+      
+      // Creating item list this way will generate a row ONLY FOR
+      // ACTIVE BUILDS were TEST CASES HAVE TESTER ASSIGNMENT
+      $buildList = array_keys($metrics['with_tester']);
+      $renderObj->info = array();  
+      foreach($buildList as $buildID) {
+        $totalRun = 0;
+        $renderObj->info[$buildID]['build_name'] = $metrics['active_builds'][$buildID]['name'];   
+        $renderObj->info[$buildID][$totalKey] = $metrics['total'][$buildID]['qty'];   
+
+        $renderObj->info[$buildID]['details'] = array();
+        
+        $rf = &$renderObj->info[$buildID]['details'];
+        foreach($code_verbose as $statusCode => $statusVerbose) {
+          $rf[$statusVerbose] = array('qty' => 0, 'percentage' => 0);
+          $rf[$statusVerbose]['qty'] = $metrics['with_tester'][$buildID][$statusCode]['exec_qty'];   
+          
+          if( $renderObj->info[$buildID][$totalKey] > 0 ) {
+            $rf[$statusVerbose]['percentage'] = 
+              number_format(100 * ($rf[$statusVerbose]['qty'] / 
+                                   $renderObj->info[$buildID][$totalKey]),1);
+          }
+          
+          $totalRun += 
+            $statusVerbose == 'not_run' ? 0 : $rf[$statusVerbose]['qty'];
+        }
+        $renderObj->info[$buildID]['percentage_completed'] =  number_format(100 * 
+            ($totalRun / $renderObj->info[$buildID][$totalKey]),1);
+      }
+         
+      foreach($code_verbose as $human) {
+        $l10n = isset($labels[$human]) ? lang_get($labels[$human]) : lang_get($human); 
+        $renderObj->colDefinition[$human]['qty'] = $l10n;
+        $renderObj->colDefinition[$human]['percentage'] = '[%]';
+      }
+  
+    }
+    return $renderObj;
+  }
 }
