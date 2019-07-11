@@ -17,7 +17,7 @@ Purpose: smarty template - show Test Results and Metrics
          th_build, th_tc_assigned, th_perc_completed, from, until,
          info_res_by_top_level_suites, info_report_tc_priorities, info_res_by_platform,send_by_email_to_me,
          info_report_milestones_prio, info_report_milestones_no_prio, info_res_by_kw,send_test_report,
-         info_gen_test_rep'}
+         info_gen_test_rep,title_res_by_kw_on_plat'}
 
 {include file="inc_head.tpl"}
 <body>
@@ -88,8 +88,23 @@ Purpose: smarty template - show Test Results and Metrics
 		<p class="italic">{$gui->buildMetricsFeedback|escape}</p>
 	{/if}
 	<br />
-  	{* ----- results by test suites -------------------------------------- *}
+    {if $gui->showPlatforms}
+      {include file="results/inc_results_show_table.tpl"
+             args_title=$labels.title_res_by_platform
+             args_first_column_header=$labels.th_platform
+             args_first_column_key='name'
+             args_show_percentage=true
+             args_column_definition=$gui->columnsDefinition->platform
+             args_column_data=$gui->statistics->platform}
+      
+      {if $gui->columnsDefinition->platform != ""}
+        <p class="italic">{$labels.info_res_by_platform}</p>
+        <br />
+      {/if}
+    {/if}
+    
 
+  	{* ----- results by test suites ------------------- *}
   	{* by TestSuite *}
   	{include file="results/inc_results_show_table.tpl"
            args_title=$labels.title_res_by_top_level_suites
@@ -114,21 +129,7 @@ Purpose: smarty template - show Test Results and Metrics
            args_column_definition=$gui->columnsDefinition->assigned_testers
            args_column_data=$gui->statistics->assigned_testers} *}
 
-    {if $gui->showPlatforms}
-      {include file="results/inc_results_show_table.tpl"
-             args_title=$labels.title_res_by_platform
-             args_first_column_header=$labels.th_platform
-             args_first_column_key='name'
-             args_show_percentage=true
-             args_column_definition=$gui->columnsDefinition->platform
-             args_column_data=$gui->statistics->platform}
-             
-      {if $gui->columnsDefinition->platform != ""}
-        <p class="italic">{$labels.info_res_by_platform}</p>
-        <br />
-      {/if}
-    {/if}
-    
+
     {if $gui->testprojectOptions->testPriorityEnabled}
       {include file="results/inc_results_show_table.tpl"
              args_title=$labels.title_report_tc_priorities
@@ -145,17 +146,36 @@ Purpose: smarty template - show Test Results and Metrics
     {/if}
   
   	{* Keywords 
-     Warning: args_first_column_key='keyword_name' is related to name used 
-              on method that generate statistics->keywords map.
+     Warning: 
+     args_first_column_key='keyword_name' is related to name used 
+     on method that generate statistics->keywords map.
   	*}
-  	{include file="results/inc_results_show_table.tpl"
-           args_title=$labels.title_res_by_kw
-           args_first_column_header=$labels.trep_kw
-           args_first_column_key='name'
-           args_show_percentage=true
-           args_column_definition=$gui->columnsDefinition->keywords
-           args_column_data=$gui->statistics->keywords}
-           
+    {if $gui->showPlatforms}
+      {foreach from=$gui->platformSet key=platId item=pname}
+
+        {if isset($gui->statistics->keywords[$platId]) }
+          {$keyOnPlat = $gui->statistics->keywords[$platId]}
+          {$tit = $labels.title_res_by_kw_on_plat}
+          {$tit = "$tit $pname"}         
+          {include file="results/inc_results_show_table.tpl"
+                 args_title=$tit
+                 args_first_column_header=$labels.trep_kw
+                 args_first_column_key='name'
+                 args_show_percentage=true
+                 args_column_definition=$gui->columnsDefinition->keywords
+                 args_column_data=keyOnPlat}
+        {/if}        
+      {/foreach}
+    {else}
+      {include file="results/inc_results_show_table.tpl"
+             args_title=$labels.title_res_by_kw
+             args_first_column_header=$labels.trep_kw
+             args_first_column_key='name'
+             args_show_percentage=true
+             args_column_definition=$gui->columnsDefinition->keywords
+             args_column_data=$gui->statistics->keywords}
+    {/if}
+
     {if $gui->columnsDefinition->keywords != ""}
       <p class="italic">{$labels.info_res_by_kw}</p>
       <br />

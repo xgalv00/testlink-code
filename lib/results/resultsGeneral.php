@@ -22,35 +22,37 @@ $tplan_mgr = new testplan($db);
 $gui = initializeGui($db,$args,$tplan_mgr);
 $mailCfg = buildMailCfg($gui);
 $metricsMgr = new tlTestPlanMetrics($db);
+
+var_dump($gui->platformSet);
 $dummy = $metricsMgr->getStatusTotalsByTopLevelTestSuiteForRender($args->tplan_id);
 
-if(is_null($dummy))
-{
+if(is_null($dummy)) {
 	// no test cases -> no report
 	$gui->do_report['status_ok'] = 0;
 	$gui->do_report['msg'] = lang_get('report_tspec_has_no_tsuites');
 	tLog('Overall Metrics page: no test cases defined');
-}
-else
-{
+} else {
+
+  // order is not important for GUI
+  $items2loop = array('testsuites');
+
 	 // do report
 	$gui->statistics->testsuites = $dummy->info;
 	$gui->do_report['status_ok'] = 1;
 	$gui->do_report['msg'] = '';
 
-	$items2loop = array('testsuites','keywords');
-	$keywordsMetrics = $metricsMgr->getStatusTotalsByKeywordForRender($args->tplan_id);
+	// $items2loop = array('testsuites','keywords');
+	$keywordsMetrics = 
+    $metricsMgr->getStatusTotalsByKeywordForRender($args->tplan_id,null, array('groupByPlatform' => $gui->showPlatforms) );
 	$gui->statistics->keywords = !is_null($keywordsMetrics) ? $keywordsMetrics->info : null; 
                               
-	if( $gui->showPlatforms )
-	{
+	if( $gui->showPlatforms ) {
 		$items2loop[] = 'platform';
 		$platformMetrics = $metricsMgr->getStatusTotalsByPlatformForRender($args->tplan_id);
 		$gui->statistics->platform = !is_null($platformMetrics) ? $platformMetrics->info : null; 
 	}
 
-	if($gui->testprojectOptions->testPriorityEnabled)
-	{
+	if($gui->testprojectOptions->testPriorityEnabled) {
 		$items2loop[] = 'priorities';
 		$filters = null;
 		$opt = array('getOnlyAssigned' => false);
@@ -58,18 +60,15 @@ else
 		$gui->statistics->priorities = !is_null($priorityMetrics) ? $priorityMetrics->info : null; 
 	}
 
-	foreach($items2loop as $item)
-	{
-    if( !is_null($gui->statistics->$item) )
-    {
+
+	foreach($items2loop as $item) {
+    if( !is_null($gui->statistics->$item) ) {
       $gui->columnsDefinition->$item = array();
       
      	// Get labels
      	$dummy = current($gui->statistics->$item);
-     	if(isset($dummy['details']))
-      {  
-        foreach($dummy['details'] as $status_verbose => $value)
-       	{
+     	if(isset($dummy['details'])) {  
+        foreach($dummy['details'] as $status_verbose => $value) {
           $dummy['details'][$status_verbose]['qty'] = lang_get($tlCfg->results['status_label'][$status_verbose]);
           $dummy['details'][$status_verbose]['percentage'] = "[%]";
         }
@@ -78,21 +77,37 @@ else
     }
   } 
 
+  $item = 'keywords';
+  if( !is_null($gui->statistics->$item) ) {
+    $gui->columnsDefinition->$item = array();
+    
+    // Get labels
+    $dummy = current($gui->statistics->$item);
+    if(isset($dummy['details'])) {  
+      foreach($dummy['details'] as $status_verbose => $value) {
+        $dummy['details'][$status_verbose]['qty'] = lang_get($tlCfg->results['status_label'][$status_verbose]);
+        $dummy['details'][$status_verbose]['percentage'] = "[%]";
+      }
+      $gui->columnsDefinition->$item = $dummy['details'];
+    }
+  }
+
+
+
  	/* BUILDS REPORT */
 	$colDefinition = null;
 	$results = null;
-	if($gui->do_report['status_ok'])
-	{
+	if($gui->do_report['status_ok']) {
 		$gui->statistics->overallBuildStatus = $metricsMgr->getOverallBuildStatusForRender($args->tplan_id);
 		$gui->displayBuildMetrics = !is_null($gui->statistics->overallBuildStatus);
 	}  
 	
   /* MILESTONE & PRIORITY REPORT */
 	$milestonesList = $tplan_mgr->get_milestones($args->tplan_id);
-	if (!empty($milestonesList))
-	{
+	if (!empty($milestonesList)) {
 		$gui->statistics->milestones = $metricsMgr->getMilestonesMetrics($args->tplan_id,$milestonesList);
   }
+
 } 
 
 $timerOff = microtime(true);
@@ -212,10 +227,11 @@ function initializeGui(&$dbHandler,$argsObj,&$tplanMgr)
   $gui->tplan_id = intval($argsObj->tplan_id);
 
   $gui->platformSet = $tplanMgr->getPlatforms($argsObj->tplan_id,array('outputFormat' => 'map'));
-  if( is_null($gui->platformSet) )
-  {
+  if( is_null($gui->platformSet) ) {
   	$gui->platformSet = array('');
   	$gui->showPlatforms = false;
+  } else {
+    natsort($gui->platformSet);
   }
 
   $gui->basehref = $_SESSION['basehref'];

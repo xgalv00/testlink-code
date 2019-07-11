@@ -3962,4 +3962,5 @@ $TLS_btn_create_and_link = 'Create & Link';
 $TLS_create_keyword_and_link = 'Create Keyword and Link to TCV';
 $TLS_export_skel = 'Export Skeleton';
 
+$TLS_title_res_by_kw_on_plat = "Results by Keyword on Platform: ";
 // ----- END ------------------------------------------------------------------
