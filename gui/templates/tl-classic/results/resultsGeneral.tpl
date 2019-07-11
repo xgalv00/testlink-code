@@ -53,8 +53,8 @@ Purpose: smarty template - show Test Results and Metrics
    <hr>
   {/if}  
   	{* ----- results by builds -------------------------------------- *}
-	<h2>{$labels.title_metrics_x_build}</h1>
-	{if 1==0 && $gui->displayBuildMetrics}
+	<h1>{$labels.title_metrics_x_build}</h1>
+	{if $gui->displayBuildMetrics}
 	<table class="simple_tableruler sortable" style="text-align: center; margin-left: 0px;">
   	<tr>
   		<th style="width: 10%;">{$labels.th_build}</th>
