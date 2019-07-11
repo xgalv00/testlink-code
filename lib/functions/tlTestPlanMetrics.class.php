@@ -762,20 +762,21 @@ class tlTestPlanMetrics extends testplan
 
   /**
    *
-   * If no build set providede, ONLY ACTIVE BUILDS will be considered
+   * If no build set provided, ONLY ACTIVE BUILDS will be considered
    *
-   * @internal revisions
-   *
-   * @since 1.9.4
    *
    */
-  function getExecCountersByPriorityExecStatus($id, $filters=null, $opt=null)
-  {
+  function getExecCountersByPriorityExecStatus($id, $filters=null, $opt=null) {
     $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
     $safe_id = intval($id);
     list($my,$builds,$sqlStm) = $this->helperGetExecCounters($safe_id, $filters, $opt);
   
-    
+    // Due to PLATFORMS we will have MULTIPLIER EFFECT
+    $fields = "";    
+    if( $my['opt']['groupByPlatform'] ) {
+      $fields = ",platform_id";
+    }
+  
     $sqlLEBP = $sqlStm['LEBP'];
 
     $sqlUnionA  =  "/* {$debugMsg} sqlUnionA - executions */" . 
@@ -849,65 +850,135 @@ class tlTestPlanMetrics extends testplan
     // If we have PLATFORM we are going to get a MULTIPLIER EFFECT
     //
     $sql =  " /* {$debugMsg} UNION WITHOUT ALL => DISCARD Duplicates */" .
-            " SELECT count(0) as exec_qty, urg_imp,status " .
+            " SELECT count(0) as exec_qty, urg_imp,status $fields " .
             " FROM ($sqlUnionA UNION $sqlUnionB ) AS SU " .
-            " GROUP BY urg_imp,status ";
-            $rs = $this->db->get_recordset($sql);
-  
+            " GROUP BY urg_imp,status $fields";
+    
+    if( $my['opt']['groupByPlatform'] ) {
+      $kol = array('platform_id','urg_imp','status');
+      echo $sql;
+      $rs = (array)$this->db->fetchRowsIntoMap3l($sql,$kol);
+    } else {
+      $rs = $this->db->get_recordset($sql);
+    }  
 
     // Now we need to get priority LEVEL from (urgency * importance)
     $out = array();
     $totals = array();
-    if( !is_null($rs) )
-    {
-      $priorityCfg = config_get('urgencyImportance');
+    $priorityCfg = config_get('urgencyImportance');
+    if( !is_null($rs) ) {
       $loop2do = count($rs);
-      for($jdx=0; $jdx < $loop2do; $jdx++)
-      {
-        if ($rs[$jdx]['urg_imp'] >= $priorityCfg->threshold['high']) 
-        {            
-          $rs[$jdx]['priority_level'] = HIGH;
-          $hitOn = HIGH;
-        } 
-        else if( $rs[$jdx]['urg_imp'] < $priorityCfg->threshold['low']) 
-        {
-          $rs[$jdx]['priority_level'] = LOW;
-          $hitOn = LOW;
-        }        
-        else
-        {
-          $rs[$jdx]['priority_level'] = MEDIUM;
-          $hitOn = MEDIUM;
+      if( $my['opt']['groupByPlatform'] ) {
+        // loop2do => platform Qty
+        foreach( $rs as $platID => $elem ) {
+          // elem key is urg_imp!! 
+          //echo '<br>';
+          //echo '<pre>';
+          //var_dump('on Platform:' . $platID);
+          //echo '</pre>';
+
+          foreach( $elem as $urgImpVal => $statusUrgImp ) {
+            //var_dump('on urgImpVal', $urgImpVal);
+            //echo '<pre>';
+            //echo '<hr>';
+            //var_dump('$statusUrgImp',$statusUrgImp);
+            //echo '</pre>';
+
+            if ($urgImpVal >= $priorityCfg->threshold['high']) {
+              $hitOn = HIGH;
+            } else if( $urgImpVal < $priorityCfg->threshold['low']) {
+              $hitOn = LOW;
+            } else {
+              $hitOn = MEDIUM;
+            }
+            
+            //var_dump('NUM OF STAT', array_keys($statusUrgImp));
+            $llx = 0;            
+            foreach( $statusUrgImp as $statusCode => $dummy ) {
+              //echo '<br> LLX:' . ++$llx . '<br>';
+              $rs[$platID][$urgImpVal][$statusCode]
+                 ['priority_level'] = $hitOn;
+              //echo '<pre>';
+              //var_dump($statusCode,
+              //         $rs[$platID][$urgImpVal][$statusCode]);
+              // echo '</pre>';
+
+              // to improve readability
+              if( !isset($out[$hitOn][$statusCode]) ) {
+                $out[$platID][$hitOn][$statusCode] = 
+                  $rs[$platID][$urgImpVal][$statusCode];
+              } else {
+                $out[$platID][$hitOn][$statusCode]['exec_qty'] += 
+                  $rs[$platID][$urgImpVal][$statusCode]['exec_qty'];
+              }
+              //echo '<br>';
+              //echo '<pre>';
+              //var_dump('$out[$hitOn]:' . $hitOn,$out[$platID][$hitOn]);
+              //echo '</pre>';
+              //echo '<br>';
+
+              if( !isset($totals[$platID][$hitOn]) ) {
+                $totals[$hitOn] = array('priority_level' => $hitOn, 
+                                        'qty' => 0);
+              }
+              $totals[$platID][$hitOn]['qty'] += 
+                $rs[$platID][$urgImpVal][$statusCode]['exec_qty'];
+            
+              //echo '<pre>';
+              //var_dump('$totals[$hitOn]:' . $hitOn,$totals[$platID][$hitOn]);
+              //echo '</pre>';
+            }
+          }
         }
-                                      
-                                                     
-        // to improve readability                                                       
-        $status = $rs[$jdx]['status'];
-        if( !isset($out[$hitOn][$status]) )
-        {
-          $out[$hitOn][$status] = $rs[$jdx];
+      } else {
+        if( !is_null($rs) ) {
+          for($jdx=0; $jdx < $loop2do; $jdx++) {
+            if ($rs[$jdx]['urg_imp'] >= $priorityCfg->threshold['high']) {            
+              $rs[$jdx]['priority_level'] = HIGH;
+              $hitOn = HIGH;
+            } else if( $rs[$jdx]['urg_imp'] < $priorityCfg->threshold['low']) {
+              $rs[$jdx]['priority_level'] = LOW;
+              $hitOn = LOW;
+            } else {
+              $rs[$jdx]['priority_level'] = MEDIUM;
+              $hitOn = MEDIUM;
+            }
+                                          
+            // to improve readability
+            $status = $rs[$jdx]['status'];
+            if( !isset($out[$hitOn][$status]) ) {
+              $out[$hitOn][$status] = $rs[$jdx];
+            } else {
+              $out[$hitOn][$status]['exec_qty'] += $rs[$jdx]['exec_qty'];
+            }
+            
+            if( !isset($totals[$hitOn]) ) {
+              $totals[$hitOn] = array('priority_level' => $hitOn, 'qty' => 0);
+            }
+            $totals[$hitOn]['qty'] += $rs[$jdx]['exec_qty'];
+          }
         }
-        else
-        {
-          $out[$hitOn][$status]['exec_qty'] += $rs[$jdx]['exec_qty'];
-        }
-        
-        if( !isset($totals[$hitOn]) )
-        {
-          $totals[$hitOn] = array('priority_level' => $hitOn, 'qty' => 0);
-        }
-        $totals[$hitOn]['qty'] += $rs[$jdx]['exec_qty'];
       }
       $exec['with_tester'] = $out;
       $out = null; 
+  
+      //echo '<pre>';
+      //var_dump(__LINE__ . 'with_tester',$exec['with_tester']);      
+      //echo '<pre>';
+      
     }
-    
-    $this->helperCompleteStatusDomain($exec,'priority_level');
+
+    // $this->helperCompleteStatusDomain($exec,'priority_level');
+    if( $my['opt']['groupByPlatform'] ) {
+      $this->helperStatusDomainMatrix($exec,'platform_id','priority_level');
+    } else {
+      $this->helperCompleteStatusDomain($exec,'priority_level');
+    }
+
     $exec['total'] = $totals;
 
     $levels = config_get('urgency');
-    foreach($levels['code_label'] as $lc => $lbl)
-    {
+    foreach($levels['code_label'] as $lc => $lbl) {
       $exec['priority_levels'][$lc] = lang_get($lbl);
     }
 
@@ -923,8 +994,7 @@ class tlTestPlanMetrics extends testplan
    * @since 1.9.4
    * 20120429 - franciscom - 
    */
-  function getStatusTotalsByPriorityForRender($id,$filters=null,$opt=null)
-  {
+  function getStatusTotalsByPriorityForRender($id,$filters=null,$opt=null) {
     $renderObj = $this->getStatusTotalsByItemForRender($id,'priority_level',$filters,$opt);
     return $renderObj;
   }
@@ -1140,7 +1210,6 @@ class tlTestPlanMetrics extends testplan
     $returnArray = false;
     $byPlatform = false;
 
-
     switch($itemType) {  
       case 'keyword':    
         $metrics = $this->getExecCountersByKeywordExecStatus($id,$filters,$opt);
@@ -1158,6 +1227,8 @@ class tlTestPlanMetrics extends testplan
       case 'priority_level':    
         $metrics = $this->getExecCountersByPriorityExecStatus($id,$filters,$opt);
         $setKey = 'priority_levels';
+        $byPlatform = isset($opt['groupByPlatform']) && 
+                      $opt['groupByPlatform'];
       break;
       
       case 'tsuite':    

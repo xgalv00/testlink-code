@@ -133,15 +133,33 @@ Purpose: smarty template - show Test Results and Metrics
            args_column_data=$gui->statistics->assigned_testers} *}
 
 
-    {if 0==1 && $gui->testprojectOptions->testPriorityEnabled}
-      {include file="results/inc_results_show_table.tpl"
-             args_title=$labels.title_report_tc_priorities
-             args_first_column_header=$labels.priority
-             args_first_column_key='name'
-             args_show_percentage=true
-             args_column_definition=$gui->columnsDefinition->priorities
-             args_column_data=$gui->statistics->priorities}
-             
+    {if $gui->testprojectOptions->testPriorityEnabled}
+      {if $gui->showPlatforms}
+        {foreach from=$gui->platformSet key=platId item=pname}
+          {if isset($gui->statistics->priorities[$platId]) }
+            {$keyOnPlat = $gui->statistics->priorities[$platId]}
+            {$tit = $labels.title_res_by_prio_on_plat}
+            {$tit = "$tit $pname"}         
+            {include file="results/inc_results_show_table.tpl"
+               args_title=$tit
+               args_first_column_header=$labels.priority
+               args_first_column_key='name'
+               args_show_percentage=true
+               args_column_definition=$gui->columnsDefinition->priorities
+               args_column_data=$gui->statistics->priorities[$platId] 
+            }
+          {/if} 
+        {/foreach}
+      {else}  
+        {include file="results/inc_results_show_table.tpl"
+               args_title=$labels.title_report_tc_priorities
+               args_first_column_header=$labels.priority
+               args_first_column_key='name'
+               args_show_percentage=true
+               args_column_definition=$gui->columnsDefinition->priorities
+               args_column_data=$gui->statistics->priorities}
+      {/if}        
+      
       {if $gui->columnsDefinition->priorities != ""}
         <p class="italic">{$labels.info_report_tc_priorities}</p>
         <br />

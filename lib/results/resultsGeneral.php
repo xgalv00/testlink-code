@@ -52,9 +52,10 @@ if(is_null($dummy)) {
 	}
 
 	if($gui->testprojectOptions->testPriorityEnabled) {
-		$items2loop[] = 'priorities';
+		// $items2loop[] = 'priorities';
 		$filters = null;
-		$opt = array('getOnlyAssigned' => false);
+		$opt = array('getOnlyAssigned' => false, 
+                 'groupByPlatform' => $gui->showPlatforms);
 		$priorityMetrics = $metricsMgr->getStatusTotalsByPriorityForRender($args->tplan_id,$filters,$opt);
 		$gui->statistics->priorities = !is_null($priorityMetrics) ? $priorityMetrics->info : null; 
 	}
@@ -76,20 +77,22 @@ if(is_null($dummy)) {
     }
   } 
 
-  $item = 'keywords';
-  if( !is_null($gui->statistics->$item) ) {
-    $gui->columnsDefinition->$item = array();
- 
-    // Get labels
-    // !!double current because main key is PLATFORM
-    $dummy = current(current($gui->statistics->$item));
-    if(isset($dummy['details'])) {  
-      foreach($dummy['details'] as $status_verbose => $value) {
-        $dummy['details'][$status_verbose]['qty'] = lang_get($tlCfg->results['status_label'][$status_verbose]);
-        $dummy['details'][$status_verbose]['percentage'] = "[%]";
+  $doubleItemToLoop = array('priorities','keywords');
+  foreach( $doubleItemToLoop as $item ) {
+    if( !is_null($gui->statistics->$item) ) {
+      $gui->columnsDefinition->$item = array();
+   
+      // Get labels
+      // !!double current because main key is PLATFORM
+      $dummy = current(current($gui->statistics->$item));
+      if(isset($dummy['details'])) {  
+        foreach($dummy['details'] as $status_verbose => $value) {
+          $dummy['details'][$status_verbose]['qty'] = lang_get($tlCfg->results['status_label'][$status_verbose]);
+          $dummy['details'][$status_verbose]['percentage'] = "[%]";
+        }
+        $gui->columnsDefinition->$item = $dummy['details'];
       }
-      $gui->columnsDefinition->$item = $dummy['details'];
-    }
+    }    
   }
 
 
@@ -124,8 +127,7 @@ displayReport($tplCfg->tpl, $smarty, $args->format,$mailCfg);
   args: none
   returns: array 
 */
-function init_args(&$dbHandler)
-{
+function init_args(&$dbHandler) {
   $iParams = array("apikey" => array(tlInputParameter::STRING_N,32,64),
                    "tproject_id" => array(tlInputParameter::INT_N), 
 	                 "tplan_id" => array(tlInputParameter::INT_N),
@@ -134,8 +136,7 @@ function init_args(&$dbHandler)
 
 	$args = new stdClass();
 	$pParams = R_PARAMS($iParams,$args);
-  if( !is_null($args->apikey) )
-  {
+  if( !is_null($args->apikey) ) {
     $cerbero = new stdClass();
     $cerbero->args = new stdClass();
     $cerbero->args->tproject_id = $args->tproject_id;
