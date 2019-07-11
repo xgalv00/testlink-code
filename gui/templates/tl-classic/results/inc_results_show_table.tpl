@@ -1,11 +1,11 @@
 {* 
 TestLink Open Source Project - http://testlink.sourceforge.net/ 
-$Id: inc_results_show_table.tpl,v 1.1 2008/03/03 18:53:20 franciscom Exp $ 
+$Id: inc_results_show_table.tpl
 *}
 
-{assign var="args_title" value=$args_title|default:""}
-{assign var="args_first_column_header" value=$args_first_column_header|default:"first column"}
-{assign var="args_show_percentage" value=$args_show_percentage|default:true}
+{$args_title=$args_title|default:""}
+{$args_first_column_header=$args_first_column_header|default:"first column"}
+{$args_show_percentage=$args_show_percentage|default:true}
 
 {if $args_column_definition != ""}
 
@@ -22,7 +22,7 @@ $Id: inc_results_show_table.tpl,v 1.1 2008/03/03 18:53:20 franciscom Exp $
     {/foreach}
 		<th>{lang_get s='trep_comp_perc'}</th>
 	</tr>
-	
+
  {foreach item=res from=$args_column_data}
   	<tr>
   	<td>{$res.$args_first_column_key|escape}</td>

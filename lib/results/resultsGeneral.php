@@ -23,7 +23,6 @@ $gui = initializeGui($db,$args,$tplan_mgr);
 $mailCfg = buildMailCfg($gui);
 $metricsMgr = new tlTestPlanMetrics($db);
 
-var_dump($gui->platformSet);
 $dummy = $metricsMgr->getStatusTotalsByTopLevelTestSuiteForRender($args->tplan_id);
 
 if(is_null($dummy)) {
@@ -80,9 +79,10 @@ if(is_null($dummy)) {
   $item = 'keywords';
   if( !is_null($gui->statistics->$item) ) {
     $gui->columnsDefinition->$item = array();
-    
+ 
     // Get labels
-    $dummy = current($gui->statistics->$item);
+    // !!double current because main key is PLATFORM
+    $dummy = current(current($gui->statistics->$item));
     if(isset($dummy['details'])) {  
       foreach($dummy['details'] as $status_verbose => $value) {
         $dummy['details'][$status_verbose]['qty'] = lang_get($tlCfg->results['status_label'][$status_verbose]);

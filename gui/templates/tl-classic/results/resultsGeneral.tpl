@@ -54,8 +54,7 @@ Purpose: smarty template - show Test Results and Metrics
   {/if}  
   	{* ----- results by builds -------------------------------------- *}
 	<h2>{$labels.title_metrics_x_build}</h1>
-
-	{if $gui->displayBuildMetrics}
+	{if 1==0 && $gui->displayBuildMetrics}
 	<table class="simple_tableruler sortable" style="text-align: center; margin-left: 0px;">
   	<tr>
   		<th style="width: 10%;">{$labels.th_build}</th>
@@ -88,6 +87,7 @@ Purpose: smarty template - show Test Results and Metrics
 		<p class="italic">{$gui->buildMetricsFeedback|escape}</p>
 	{/if}
 	<br />
+    {if 1==0}
     {if $gui->showPlatforms}
       {include file="results/inc_results_show_table.tpl"
              args_title=$labels.title_res_by_platform
@@ -102,10 +102,12 @@ Purpose: smarty template - show Test Results and Metrics
         <br />
       {/if}
     {/if}
+    {/if}
     
 
   	{* ----- results by test suites ------------------- *}
   	{* by TestSuite *}
+    {if 1==0}
   	{include file="results/inc_results_show_table.tpl"
            args_title=$labels.title_res_by_top_level_suites
            args_first_column_header=$labels.trep_comp
@@ -118,6 +120,7 @@ Purpose: smarty template - show Test Results and Metrics
   	  <p class="italic">{$labels.info_res_by_top_level_suites}</p>
   	  <br />
   	{/if}
+    {/if}
 
   
   	{* by ASSIGNED Tester that is not the same that EFFECTIVE TESTER 
@@ -130,7 +133,7 @@ Purpose: smarty template - show Test Results and Metrics
            args_column_data=$gui->statistics->assigned_testers} *}
 
 
-    {if $gui->testprojectOptions->testPriorityEnabled}
+    {if 0==1 && $gui->testprojectOptions->testPriorityEnabled}
       {include file="results/inc_results_show_table.tpl"
              args_title=$labels.title_report_tc_priorities
              args_first_column_header=$labels.priority
@@ -163,7 +166,7 @@ Purpose: smarty template - show Test Results and Metrics
                  args_first_column_key='name'
                  args_show_percentage=true
                  args_column_definition=$gui->columnsDefinition->keywords
-                 args_column_data=keyOnPlat}
+                 args_column_data=$gui->statistics->keywords[$platId]}
         {/if}        
       {/foreach}
     {else}
