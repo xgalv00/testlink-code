@@ -3964,4 +3964,9 @@ $TLS_export_skel = 'Export Skeleton';
 
 $TLS_title_res_by_kw_on_plat = "Results by Keyword on Platform: ";
 $TLS_title_res_by_prio_on_plat = "Results by Priority on Platform: ";
+$TLS_title_res_by_tl_testsuite_on_plat = 
+  "Results by Top Level Test Suite on Platform: ";
+
+$TLS_title_res_by_tl_testsuite = "Results by Top Level Test Suite";
+
 // ----- END ------------------------------------------------------------------

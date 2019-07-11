@@ -1235,6 +1235,8 @@ class tlTestPlanMetrics extends testplan
         $metrics = $this->getExecCountersByTestSuiteExecStatus($id,$filters,$opt);
         $setKey = 'tsuites';
         $returnArray = true;
+        $byPlatform = isset($opt['groupByPlatform']) && 
+                      $opt['groupByPlatform'];
       break;
     }
 
@@ -1350,14 +1352,23 @@ class tlTestPlanMetrics extends testplan
    */
   function getStatusTotalsByTopLevelTestSuiteForRender($id,$filters=null,$opt=null)
   {
+
+    var_dump(__FUNCTION__,$opt);
+    echo '<br>';
     list($rObj,$staircase) = $this->getStatusTotalsByItemForRender($id,'tsuite',$filters,$opt);
+
+    //echo '<pre>';
+    //var_dump('$rObj',$rObj);
   
-    $key2loop = array_keys($rObj->info);
+    //var_dump('$staircase',$staircase);
+    //echo '</pre>';
+    //die();
+  
+    // ??? $key2loop = array_keys($rObj->info);
     $template = array('type' => 'tsuite', 'name' => '','total_tc' => 0,
               'percentage_completed' => 0, 'details' => array());  
 
-    foreach($this->statusCode as $verbose => $code)
-    {
+    foreach($this->statusCode as $verbose => $code) {
       $template['details'][$verbose] = array('qty' => 0, 'percentage' => 0);
     }
     
@@ -1367,71 +1378,111 @@ class tlTestPlanMetrics extends testplan
     // collect qty
     $topNameCache = null;
     $execQty = null;
-    foreach($key2loop as $tsuite_id)
-    {
-      // (count() == 1) => is a TOP LEVEL SUITE, 
-      // only element contains Root node, is useless for this algorithm
-      // 
-      
-      if( count($staircase[$tsuite_id]) > 1)
-      {
-        // element at position 1 is a TOP LEVEL SUITE
-        $topSuiteID = &$staircase[$tsuite_id][1];
-        $initName = false;
+
+    $key2loop = array_keys($staircase);
+
+    if( isset($opt['groupByPlatform']) && 
+        $opt['groupByPlatform']) {
+
+      $plat2loop = array_keys($rObj->info);
+      foreach($key2loop as $tsuite_id) {
+        // (count() == 1) => is a TOP LEVEL SUITE, 
+        // only element contains Root node, is useless for this algorithm
+        // 
+        
+        if( count($staircase[$tsuite_id]) > 1) {
+          // element at position 1 is a TOP LEVEL SUITE
+          $topSuiteID = &$staircase[$tsuite_id][1];
+          $initName = false;
+        } else {
+          $topSuiteID = $tsuite_id;
+          $initName = true;
+        }     
+    
+        // Over Platform
+        foreach( $plat2loop as $platId ) {
+          if( !isset($renderObj->info[$platId][$topSuiteID]) ) {
+            $renderObj->info[$platId][$topSuiteID] = $template;
+            $execQty[$platId][$topSuiteID] = 0;
+            $initName = true;
+          }              
+
+          if( $initName ) {
+            $dummy = $this->tree_manager->get_node_hierarchy_info($topSuiteID);
+            $renderObj->info[$platId][$topSuiteID]['name'] = 
+              $dummy['name'];
+            unset($dummy);
+          }  
+          
+          // Loop to get executions counters
+          foreach($rObj->info[$platId][$tsuite_id]['details'] 
+                   as $code => &$elem) {
+            $renderObj->info[$platId][$topSuiteID]['details'][$code]
+              ['qty'] += $elem['qty'];    
+            $renderObj->info[$platId][$topSuiteID]['total_tc'] += 
+              $elem['qty'];
+
+            if( $code != 'not_run' ) {
+              $execQty[$platId][$topSuiteID] += $elem['qty'];
+            }
+          }
+        }  
       }
-      else
-      {
-        $topSuiteID = $tsuite_id;
-        $initName = true;
-      }     
-      
-      
-      
-        if( !isset($renderObj->info[$topSuiteID]) )
-        {
+
+    } else {
+      foreach($key2loop as $tsuite_id) {
+        // (count() == 1) => is a TOP LEVEL SUITE, 
+        // only element contains Root node, is useless for this algorithm
+        // 
+        
+        if( count($staircase[$tsuite_id]) > 1) {
+          // element at position 1 is a TOP LEVEL SUITE
+          $topSuiteID = &$staircase[$tsuite_id][1];
+          $initName = false;
+        } else {
+          $topSuiteID = $tsuite_id;
+          $initName = true;
+        }     
+        
+        if( !isset($renderObj->info[$topSuiteID]) ) {
           $renderObj->info[$topSuiteID] = $template;
           $execQty[$topSuiteID] = 0;
           $initName = true;
         }  
 
-        if( $initName )
-        {
+        if( $initName ) {
           $dummy = $this->tree_manager->get_node_hierarchy_info($topSuiteID);
           $renderObj->info[$topSuiteID]['name'] = $dummy['name'];
           unset($dummy);
         }        
-        
-        
+          
+          
         // Loop to get executions counters
-        foreach($rObj->info[$tsuite_id]['details'] as $code => &$elem)
-        {
+        foreach($rObj->info[$tsuite_id]['details'] as $code => &$elem) {
           $renderObj->info[$topSuiteID]['details'][$code]['qty'] += $elem['qty'];    
           $renderObj->info[$topSuiteID]['total_tc'] += $elem['qty'];
 
-          if(  $code != 'not_run' )
-          {
-            $execQty[$topSuiteID] += $elem['qty'];
+          if(  $code != 'not_run' ) {
+              $execQty[$topSuiteID] += $elem['qty'];
           }
         }
       }  
-       
-    // Last step: get percentages
-    foreach($renderObj->info as $tsuite_id => &$elem)
-    {
-      if( $execQty[$tsuite_id] > 0 )
-      {
-        $elem['percentage_completed'] = number_format( 100 * ($execQty[$tsuite_id] / $elem['total_tc']),1);
-      }  
+         
+      // Last step: get percentages
+      foreach($renderObj->info as $tsuite_id => &$elem) {
+        if( $execQty[$tsuite_id] > 0 ) {
+          $elem['percentage_completed'] = number_format( 100 * ($execQty[$tsuite_id] / $elem['total_tc']),1);
+        }  
 
-      if( $elem['total_tc'] > 0 )
-      {
-        foreach($elem['details'] as $code => &$yumyum)
-        {
-          $yumyum['percentage'] = number_format( 100 * ($yumyum['qty'] / $elem['total_tc']),1);    
+        if( $elem['total_tc'] > 0 ) {
+          foreach($elem['details'] as $code => &$yumyum) {
+            $yumyum['percentage'] = number_format( 100 * ($yumyum['qty'] / $elem['total_tc']),1);    
+          }
         }
-      }
+      }      
     }
-    
+
+
     unset($topNameCache);
     unset($rObj);
     unset($staircase);
@@ -1454,97 +1505,111 @@ class tlTestPlanMetrics extends testplan
     $safe_id = intval($id);
     list($my,$builds,$sqlStm) = $this->helperGetExecCounters($id, $filters, $opt);
 
+    $fields = "";    
+    if( $my['opt']['groupByPlatform'] ) {
+      $fields = ",platform_id";
+    }
+
+
     // Latest Execution Ignoring Build
     $sqlLEBP = $sqlStm['LEBP'];
 
     $sqlUnionAT  =  "/* {$debugMsg} sqlUnionAT - executions */" . 
-            " SELECT NHTC.parent_id AS tsuite_id,TPTCV.platform_id," .
-            " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
-            " FROM {$this->tables['testplan_tcversions']} TPTCV " .
+      " SELECT NHTC.parent_id AS tsuite_id,TPTCV.platform_id," .
+      " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
+      " FROM {$this->tables['testplan_tcversions']} TPTCV " .
 
-            $sqlStm['getAssignedFeatures'] .
-            
-            " /* GO FOR Absolute LATEST exec ID IGNORE BUILD */ " .
-            " JOIN ({$sqlLEBP}) AS LEBP " .
-            " ON  LEBP.testplan_id = TPTCV.testplan_id " .
-            " AND LEBP.platform_id = TPTCV.platform_id " .
-            " AND LEBP.tcversion_id = TPTCV.tcversion_id " .
-            " AND LEBP.testplan_id = " . $safe_id .
-
-            " /* Get execution status WRITTEN on DB */ " .
-            " JOIN {$this->tables['executions']} E " .
-            " ON  E.id = LEBP.id " .
-
-            " /* Get Test Case info from Test Case Version */ " .
-            " JOIN {$this->tables['nodes_hierarchy']} NHTCV " .
-            " ON  NHTCV.id = TPTCV.tcversion_id " .
-
-            " /* Get Test Suite info from Test Case  */ " .
-            " JOIN {$this->tables['nodes_hierarchy']} NHTC " .
-            " ON  NHTC.id = NHTCV.parent_id " .
+      $sqlStm['getAssignedFeatures'] .
       
-            " WHERE TPTCV.testplan_id=" . $safe_id .
-            $builds->whereAddExec;
+      " /* GO FOR Absolute LATEST exec ID IGNORE BUILD */ " .
+      " JOIN ({$sqlLEBP}) AS LEBP " .
+      " ON  LEBP.testplan_id = TPTCV.testplan_id " .
+      " AND LEBP.platform_id = TPTCV.platform_id " .
+      " AND LEBP.tcversion_id = TPTCV.tcversion_id " .
+      " AND LEBP.testplan_id = " . $safe_id .
+
+      " /* Get execution status WRITTEN on DB */ " .
+      " JOIN {$this->tables['executions']} E " .
+      " ON  E.id = LEBP.id " .
+
+      " /* Get Test Case info from Test Case Version */ " .
+      " JOIN {$this->tables['nodes_hierarchy']} NHTCV " .
+      " ON  NHTCV.id = TPTCV.tcversion_id " .
+
+      " /* Get Test Suite info from Test Case  */ " .
+      " JOIN {$this->tables['nodes_hierarchy']} NHTC " .
+      " ON  NHTC.id = NHTCV.parent_id " .
+
+      " WHERE TPTCV.testplan_id=" . $safe_id .
+      $builds->whereAddExec;
             
 
 
     $sqlUnionBT  =  "/* {$debugMsg} sqlUnionBK - NOT RUN */" . 
-            " SELECT NHTC.parent_id AS tsuite_id,TPTCV.platform_id," .
-            " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
-            " FROM {$this->tables['testplan_tcversions']} TPTCV " .
-            
-            $sqlStm['getAssignedFeatures'] .
+      " SELECT NHTC.parent_id AS tsuite_id,TPTCV.platform_id," .
+      " COALESCE(E.status,'{$this->notRunStatusCode}') AS status " .
+      " FROM {$this->tables['testplan_tcversions']} TPTCV " .
+      
+      $sqlStm['getAssignedFeatures'] .
 
-            " /* Get REALLY NOT RUN => BOTH LEBP.id AND E.id ON LEFT OUTER see WHERE  */ " .
-            " LEFT OUTER JOIN ({$sqlLEBP}) AS LEBP " .
-            " ON  LEBP.testplan_id = TPTCV.testplan_id " .
-            " AND LEBP.platform_id = TPTCV.platform_id " .
-            " AND LEBP.tcversion_id = TPTCV.tcversion_id " .
-            " AND LEBP.testplan_id = " . $safe_id .
-            " LEFT OUTER JOIN {$this->tables['executions']} E " .
-            " ON  E.tcversion_id = TPTCV.tcversion_id " .
-            " AND E.testplan_id = TPTCV.testplan_id " .
-            " AND E.platform_id = TPTCV.platform_id " .
+      " /* Get REALLY NOT RUN => BOTH LEBP.id AND E.id ON LEFT OUTER see WHERE  */ " .
+      " LEFT OUTER JOIN ({$sqlLEBP}) AS LEBP " .
+      " ON  LEBP.testplan_id = TPTCV.testplan_id " .
+      " AND LEBP.platform_id = TPTCV.platform_id " .
+      " AND LEBP.tcversion_id = TPTCV.tcversion_id " .
+      " AND LEBP.testplan_id = " . $safe_id .
+      " LEFT OUTER JOIN {$this->tables['executions']} E " .
+      " ON  E.tcversion_id = TPTCV.tcversion_id " .
+      " AND E.testplan_id = TPTCV.testplan_id " .
+      " AND E.platform_id = TPTCV.platform_id " .
 
-            $builds->joinAdd .
+      $builds->joinAdd .
 
-            " /* Get Test Case info from Test Case Version */ " .
-            " JOIN {$this->tables['nodes_hierarchy']} NHTCV " .
-            " ON  NHTCV.id = TPTCV.tcversion_id " .
+      " /* Get Test Case info from Test Case Version */ " .
+      " JOIN {$this->tables['nodes_hierarchy']} NHTCV " .
+      " ON  NHTCV.id = TPTCV.tcversion_id " .
 
-            " /* Get Test Suite info from Test Case  */ " .
-            " JOIN {$this->tables['nodes_hierarchy']} NHTC " .
-            " ON  NHTC.id = NHTCV.parent_id " .
+      " /* Get Test Suite info from Test Case  */ " .
+      " JOIN {$this->tables['nodes_hierarchy']} NHTC " .
+      " ON  NHTC.id = NHTCV.parent_id " .
 
-            " /* FILTER BUILDS in set on target test plan (not alway can be applied) */ " .
-            " WHERE TPTCV.testplan_id=" . $safe_id . 
-            $builds->whereAddNotRun .
-  
-            " /* Get REALLY NOT RUN => BOTH LE.id AND E.id NULL  */ " .
-            " AND E.id IS NULL AND LEBP.id IS NULL";
+      " /* FILTER BUILDS in set on target test plan (not alway can be applied) */ " .
+      " WHERE TPTCV.testplan_id=" . $safe_id . 
+      $builds->whereAddNotRun .
+
+      " /* Get REALLY NOT RUN => BOTH LE.id AND E.id NULL  */ " .
+      " AND E.id IS NULL AND LEBP.id IS NULL";
 
     
-    $sql =  " /* {$debugMsg} UNION ALL => DO NOT DISCARD Duplicates */" .
-        " SELECT tsuite_id,status, count(0) AS exec_qty " .
+    $sql =  " /* {$debugMsg} UNION ALL DO NOT DISCARD Duplicates */" .
+        " SELECT count(0) AS exec_qty, tsuite_id, status $fields" .
         " FROM ($sqlUnionAT UNION ALL $sqlUnionBT ) AS SQT " .
-        " GROUP BY tsuite_id,status ";
+        " GROUP BY tsuite_id ,status $fields";
 
-    $exec['with_tester'] = (array)$this->db->fetchMapRowsIntoMap($sql,'tsuite_id','status');              
+    if( $my['opt']['groupByPlatform'] ) {
+      $kol = array('platform_id','tsuite_id','status');
+      $exec['with_tester'] = 
+        (array)$this->db->fetchRowsIntoMap3l($sql,$kol);
+      $this->helperStatusDomainMatrix($exec,'platform_id','tsuite_id');
+
+    } else {
+      $exec['with_tester'] = 
+        (array)$this->db->fetchMapRowsIntoMap($sql,'tsuite_id','status');
+
+      // now we need to complete status domain
+      $this->helperCompleteStatusDomain($exec,'tsuite_id');
+    }
         
-    // now we need to complete status domain
-    $this->helperCompleteStatusDomain($exec,'tsuite_id');
   
     // Build item set
     $exec['tsuites_full'] = $this->get_testsuites($safe_id);
     $loop2do = count($exec['tsuites_full']);
-    for($idx=0; $idx < $loop2do; $idx++)
-    {
+    for($idx=0; $idx < $loop2do; $idx++) {
       $keySet[] = $exec['tsuites_full'][$idx]['id'];
 
     }
     $dx = $this->tree_manager->get_full_path_verbose($keySet,array('output_format' => 'stairway2heaven'));
-    for($idx=0; $idx < $loop2do; $idx++)
-    {
+    for($idx=0; $idx < $loop2do; $idx++) {
       $exec['tsuites'][$exec['tsuites_full'][$idx]['id']] = $dx['flat'][$exec['tsuites_full'][$idx]['id']];
     }
     $exec['staircase'] = $dx['staircase'];

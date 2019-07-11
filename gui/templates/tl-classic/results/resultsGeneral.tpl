@@ -17,7 +17,7 @@ Purpose: smarty template - show Test Results and Metrics
          th_build, th_tc_assigned, th_perc_completed, from, until,
          info_res_by_top_level_suites, info_report_tc_priorities, info_res_by_platform,send_by_email_to_me,
          info_report_milestones_prio, info_report_milestones_no_prio, info_res_by_kw,send_test_report,
-         info_gen_test_rep,title_res_by_kw_on_plat,title_res_by_prio_on_plat'}
+         info_gen_test_rep,title_res_by_kw_on_plat,title_res_by_prio_on_plat,test_suite,title_res_by_tl_testsuite_on_plat,title_res_by_prio,title_res_by_tl_testsuite'}
 
 {include file="inc_head.tpl"}
 <body>
@@ -87,10 +87,10 @@ Purpose: smarty template - show Test Results and Metrics
 		<p class="italic">{$gui->buildMetricsFeedback|escape}</p>
 	{/if}
 	<br />
-    {if 1==0}
     {if $gui->showPlatforms}
+      <h1>{$labels.title_res_by_platform}</h1>
       {include file="results/inc_results_show_table.tpl"
-             args_title=$labels.title_res_by_platform
+             args_title=''
              args_first_column_header=$labels.th_platform
              args_first_column_key='name'
              args_show_percentage=true
@@ -102,25 +102,42 @@ Purpose: smarty template - show Test Results and Metrics
         <br />
       {/if}
     {/if}
-    {/if}
     
 
   	{* ----- results by test suites ------------------- *}
   	{* by TestSuite *}
-    {if 1==0}
-  	{include file="results/inc_results_show_table.tpl"
-           args_title=$labels.title_res_by_top_level_suites
-           args_first_column_header=$labels.trep_comp
-           args_first_column_key='name'
-           args_show_percentage=true
-           args_column_definition=$gui->columnsDefinition->testsuites
-           args_column_data=$gui->statistics->testsuites}
-           
+    <h1>{$labels.title_res_by_tl_testsuite}</h1>
+    {if $gui->showPlatforms}
+      {foreach from=$gui->platformSet key=platId item=pname}
+        {if isset($gui->statistics->testsuites[$platId]) }
+            {$keyOnPlat = $gui->statistics->testsuites[$platId]}
+            {$tit = $labels.title_res_by_tl_testsuite_on_plat}
+            {$tit = "$tit $pname"}         
+            {include file="results/inc_results_show_table.tpl"
+               args_title=$tit
+               args_first_column_header=$labels.test_suite
+               args_first_column_key='name'
+               args_show_percentage=true
+               args_column_definition=$gui->columnsDefinition->testsuites
+               args_column_data=$gui->statistics->testsuites[$platId] 
+            }
+          {/if} 
+      {/foreach}
+    {else}
+    	{include file="results/inc_results_show_table.tpl"
+             args_title=$labels.title_res_by_top_level_suites
+             args_first_column_header=$labels.test_suite
+             args_first_column_key='name'
+             args_show_percentage=true
+             args_column_definition=$gui->columnsDefinition->testsuites
+             args_column_data=$gui->statistics->testsuites}
+    }
+    {/if}
+
     {if $gui->columnsDefinition->testsuites != ""}
   	  <p class="italic">{$labels.info_res_by_top_level_suites}</p>
   	  <br />
   	{/if}
-    {/if}
 
   
   	{* by ASSIGNED Tester that is not the same that EFFECTIVE TESTER 
@@ -134,6 +151,7 @@ Purpose: smarty template - show Test Results and Metrics
 
 
     {if $gui->testprojectOptions->testPriorityEnabled}
+      <h1>{$labels.title_res_by_prio}</h1>
       {if $gui->showPlatforms}
         {foreach from=$gui->platformSet key=platId item=pname}
           {if isset($gui->statistics->priorities[$platId]) }
@@ -171,6 +189,8 @@ Purpose: smarty template - show Test Results and Metrics
      args_first_column_key='keyword_name' is related to name used 
      on method that generate statistics->keywords map.
   	*}
+
+    <h1>{$labels.title_res_by_kw}</h1>
     {if $gui->showPlatforms}
       {foreach from=$gui->platformSet key=platId item=pname}
 

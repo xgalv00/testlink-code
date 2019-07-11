@@ -23,9 +23,9 @@ $gui = initializeGui($db,$args,$tplan_mgr);
 $mailCfg = buildMailCfg($gui);
 $metricsMgr = new tlTestPlanMetrics($db);
 
-$dummy = $metricsMgr->getStatusTotalsByTopLevelTestSuiteForRender($args->tplan_id);
+$tsInf = $metricsMgr->getStatusTotalsByTopLevelTestSuiteForRender($args->tplan_id,null,array('groupByPlatform' => $gui->showPlatforms));
 
-if(is_null($dummy)) {
+if(is_null($tsInf)) {
 	// no test cases -> no report
 	$gui->do_report['status_ok'] = 0;
 	$gui->do_report['msg'] = lang_get('report_tspec_has_no_tsuites');
@@ -33,10 +33,15 @@ if(is_null($dummy)) {
 } else {
 
   // order is not important for GUI
-  $items2loop = array('testsuites');
+  //$items2loop = array('testsuites');
 
-	 // do report
-	$gui->statistics->testsuites = $dummy->info;
+  //echo '<pre>';
+  //var_dump('tsi',$tsInf->info);
+  //echo '</pre>';
+  //die();
+
+	// do report
+	$gui->statistics->testsuites = $tsInf->info;
 	$gui->do_report['status_ok'] = 1;
 	$gui->do_report['msg'] = '';
 
@@ -77,7 +82,7 @@ if(is_null($dummy)) {
     }
   } 
 
-  $doubleItemToLoop = array('priorities','keywords');
+  $doubleItemToLoop = array('priorities','keywords','testsuites');
   foreach( $doubleItemToLoop as $item ) {
     if( !is_null($gui->statistics->$item) ) {
       $gui->columnsDefinition->$item = array();
