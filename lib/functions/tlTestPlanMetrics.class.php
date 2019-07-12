@@ -917,18 +917,7 @@ class tlTestPlanMetrics extends testplan
       if( $my['opt']['groupByPlatform'] ) {
         // loop2do => platform Qty
         foreach( $rs as $platID => $elem ) {
-          // elem key is urg_imp!! 
-          //echo '<br>';
-          //echo '<pre>';
-          //var_dump('on Platform:' . $platID);
-          //echo '</pre>';
-
           foreach( $elem as $urgImpVal => $statusUrgImp ) {
-            //var_dump('on urgImpVal', $urgImpVal);
-            //echo '<pre>';
-            //echo '<hr>';
-            //var_dump('$statusUrgImp',$statusUrgImp);
-            //echo '</pre>';
 
             if ($urgImpVal >= $priorityCfg->threshold['high']) {
               $hitOn = HIGH;
@@ -938,35 +927,29 @@ class tlTestPlanMetrics extends testplan
               $hitOn = MEDIUM;
             }
             
-            //var_dump('NUM OF STAT', array_keys($statusUrgImp));
             $llx = 0;            
             foreach( $statusUrgImp as $statusCode => $dummy ) {
-              //echo '<br> LLX:' . ++$llx . '<br>';
-              $rs[$platID][$urgImpVal][$statusCode]
-                 ['priority_level'] = $hitOn;
-              //echo '<pre>';
-              //var_dump($statusCode,
-              //         $rs[$platID][$urgImpVal][$statusCode]);
-              // echo '</pre>';
+              
+              $rz = &$rs[$platID][$urgImpVal][$statusCode];
+              $rz['priority_level'] = $hitOn;
 
               // to improve readability
               if( !isset($out[$hitOn][$statusCode]) ) {
-                $out[$platID][$hitOn][$statusCode] = 
-                  $rs[$platID][$urgImpVal][$statusCode];
+                $out[$platID][$hitOn][$statusCode] = $rz;
               } else {
                 $out[$platID][$hitOn][$statusCode]['exec_qty'] += 
-                  $rs[$platID][$urgImpVal][$statusCode]['exec_qty'];
+                  $rz['exec_qty'];
               }
               if( !isset($totals[$platID][$hitOn]) ) {
-                $totals[$hitOn] = array('priority_level' => $hitOn, 
-                                        'qty' => 0);
+                $totals[$platID][$hitOn] = 
+                  array('priority_level' => $hitOn, 'qty' => 0);
               }
-              $totals[$platID][$hitOn]['qty'] += 
-                $rs[$platID][$urgImpVal][$statusCode]['exec_qty'];
+              $totals[$platID][$hitOn]['qty'] += $rz['exec_qty'];
             }
           }
         }
       } else {
+        // The OLD WAY 
         if( !is_null($rs) ) {
           for($jdx=0; $jdx < $loop2do; $jdx++) {
             if ($rs[$jdx]['urg_imp'] >= $priorityCfg->threshold['high']) {            
