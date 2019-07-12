@@ -6,6 +6,7 @@ $Id: inc_results_show_table.tpl
 {$args_title=$args_title|default:""}
 {$args_first_column_header=$args_first_column_header|default:"first column"}
 {$args_show_percentage=$args_show_percentage|default:true}
+{$colForTotal=$args_column_for_total|default:"total_tc"} 
 
 {if $args_column_definition != ""}
 
@@ -26,7 +27,7 @@ $Id: inc_results_show_table.tpl
  {foreach item=res from=$args_column_data}
   	<tr>
   	<td>{$res.$args_first_column_key|escape}</td>
-  	<td>{$res.total_tc}</td>
+  	<td>{$res.$colForTotal}</td>
       {foreach item=the_column from=$res.details}
           <td>{$the_column.qty}</td>
         {if $args_show_percentage}

@@ -1399,16 +1399,16 @@ class tlTestPlanMetrics extends testplan
   function getStatusTotalsByTopLevelTestSuiteForRender($id,$filters=null,$opt=null)
   {
 
-    list($rObj,$staircase) = $this->getStatusTotalsByItemForRender($id,'tsuite',$filters,$opt);
+    list($rx,$staircase) = $this->getStatusTotalsByItemForRender($id,'tsuite',$filters,$opt);
 
     //echo '<pre>';
-    //var_dump('$rObj',$rObj);
+    //var_dump('$rx',$rx);
   
     //var_dump('$staircase',$staircase);
     //echo '</pre>';
     //die();
   
-    // ??? $key2loop = array_keys($rObj->info);
+    // ??? $key2loop = array_keys($rx->info);
     $template = array('type' => 'tsuite', 'name' => '','total_tc' => 0,
               'percentage_completed' => 0, 'details' => array());  
 
@@ -1417,18 +1417,20 @@ class tlTestPlanMetrics extends testplan
     }
     
     $renderObj = new stdClass();
-    $renderObj->colDefinition = $rObj->colDefinition;
+    $renderObj->colDefinition = $rx->colDefinition;
     
     // collect qty
     $topNameCache = null;
     $execQty = null;
 
     $key2loop = array_keys($staircase);
+    $wp = isset($opt['groupByPlatform']) && $opt['groupByPlatform'];
 
-    if( isset($opt['groupByPlatform']) && 
-        $opt['groupByPlatform']) {
+    if( $wp ) {
 
-      $plat2loop = array_keys($rObj->info);
+
+
+      $plat2loop = array_keys($rx->info);
       foreach($key2loop as $tsuite_id) {
         // (count() == 1) => is a TOP LEVEL SUITE, 
         // only element contains Root node, is useless for this algorithm
@@ -1459,8 +1461,8 @@ class tlTestPlanMetrics extends testplan
           }  
           
           // Loop to get executions counters
-          foreach($rObj->info[$platId][$tsuite_id]['details'] 
-                   as $code => &$elem) {
+          $r2d2 = &$rx->info[$platId][$tsuite_id];
+          foreach($r2d2['details'] as $code => &$elem) {
             $renderObj->info[$platId][$topSuiteID]['details'][$code]
               ['qty'] += $elem['qty'];    
             $renderObj->info[$platId][$topSuiteID]['total_tc'] += 
@@ -1502,7 +1504,7 @@ class tlTestPlanMetrics extends testplan
           
           
         // Loop to get executions counters
-        foreach($rObj->info[$tsuite_id]['details'] as $code => &$elem) {
+        foreach($rx->info[$tsuite_id]['details'] as $code => &$elem) {
           $renderObj->info[$topSuiteID]['details'][$code]['qty'] += $elem['qty'];    
           $renderObj->info[$topSuiteID]['total_tc'] += $elem['qty'];
 
@@ -1528,7 +1530,7 @@ class tlTestPlanMetrics extends testplan
 
 
     unset($topNameCache);
-    unset($rObj);
+    unset($rx);
     unset($staircase);
     unset($template);
     unset($key2loop);
@@ -2907,60 +2909,68 @@ class tlTestPlanMetrics extends testplan
   
   /**
    *
-   *
+   * NEWZ
    **/
   function getBuildByPlatStatusForRender($id, $totalKey='total_assigned') {
 
     $renderObj = null;
-    $code_verbose = $this->getStatusForReports();
+    $codeSet = $this->getStatusForReports();
     $labels = $this->resultsCfg['status_label'];
     
     $opt = array('groupByPlatform' => true);  
     $metrics = $this->getExecCountersByBuildExecStatus($id,null,$opt);
 
+    echo 'NEW Z';  
+    echo '<pre>';
+    //var_dump($metrics['active_builds']);
+    echo '</pre>';
+    //die();
+
+    // Creating item list this way will generate a row also for
+    // ACTIVE BUILDS were ALL TEST CASES HAVE NO TESTER ASSIGNMENT
+    // $buildList = array_keys($metrics['active_builds']);
+    
+    // Creating item list this way will generate a row ONLY FOR
+    // ACTIVE BUILDS were TEST CASES HAVE TESTER ASSIGNMENT
     if( !is_null($metrics) ) {
-       $renderObj = new stdClass();
+      $renObj = new stdClass();
+      $renObj->info = array();  
 
-      // Creating item list this way will generate a row also for
-      // ACTIVE BUILDS were ALL TEST CASES HAVE NO TESTER ASSIGNMENT
-      // $buildList = array_keys($metrics['active_builds']);
-      
-      // Creating item list this way will generate a row ONLY FOR
-      // ACTIVE BUILDS were TEST CASES HAVE TESTER ASSIGNMENT
-      $buildList = array_keys($metrics['with_tester']);
-      $renderObj->info = array();  
-      foreach($buildList as $buildID) {
-        $totalRun = 0;
-        $renderObj->info[$buildID]['build_name'] = $metrics['active_builds'][$buildID]['name'];   
-        $renderObj->info[$buildID][$totalKey] = $metrics['total'][$buildID]['qty'];   
+      $platList = array_keys($metrics['with_tester']);
+      $mwt = &$metrics['with_tester'];
+      foreach( $mwt as $platID => $buildMetrics ) {
+        foreach($buildMetrics as $buildID => $met ) {
+          $totalRun = 0;
+          $yo = &$renObj->info[$platID][$buildID];
+          $yo['build_name'] = 
+            $metrics['active_builds'][$buildID]['name']; 
+          $yo[$totalKey] = 
+            $metrics['total'][$platID][$buildID]['qty'];   
+          $yo['details'] = array();
 
-        $renderObj->info[$buildID]['details'] = array();
-        
-        $rf = &$renderObj->info[$buildID]['details'];
-        foreach($code_verbose as $statusCode => $statusVerbose) {
-          $rf[$statusVerbose] = array('qty' => 0, 'percentage' => 0);
-          $rf[$statusVerbose]['qty'] = $metrics['with_tester'][$buildID][$statusCode]['exec_qty'];   
-          
-          if( $renderObj->info[$buildID][$totalKey] > 0 ) {
-            $rf[$statusVerbose]['percentage'] = 
-              number_format(100 * ($rf[$statusVerbose]['qty'] / 
-                                   $renderObj->info[$buildID][$totalKey]),1);
-          }
-          
-          $totalRun += 
-            $statusVerbose == 'not_run' ? 0 : $rf[$statusVerbose]['qty'];
+          $rf = &$yo['details'];
+          foreach($codeSet as $cCode => $code4h) {
+            $rf[$code4h] = array('qty' => 0, 'percentage' => 0);
+            $rf[$code4h]['qty'] = $buildMetrics[$buildID][$cCode]['exec_qty'];   
+            
+            if( $yo[$totalKey] > 0 ) {
+              $rf[$code4h]['percentage'] = 
+                number_format(100 * ($rf[$code4h]['qty'] / $yo[$totalKey]),1);
+            }
+            
+            $totalRun += 
+              $code4h == 'not_run' ? 0 : $rf[$code4h]['qty'];
+          }        
         }
-        $renderObj->info[$buildID]['percentage_completed'] =  number_format(100 * 
-            ($totalRun / $renderObj->info[$buildID][$totalKey]),1);
-      }
-         
-      foreach($code_verbose as $human) {
+      }  
+
+      foreach($codeSet as $human) {
         $l10n = isset($labels[$human]) ? lang_get($labels[$human]) : lang_get($human); 
-        $renderObj->colDefinition[$human]['qty'] = $l10n;
-        $renderObj->colDefinition[$human]['percentage'] = '[%]';
+        $renObj->colDefinition[$human]['qty'] = $l10n;
+        $renObj->colDefinition[$human]['percentage'] = '[%]';
       }
   
     }
-    return $renderObj;
+    return $renObj;
   }
 }

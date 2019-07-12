@@ -52,7 +52,8 @@ Purpose: smarty template - show Test Results and Metrics
    {$labels.report_tcase_platorm_relationship}
    <hr>
   {/if}  
-  	{* ----- results by builds -------------------------------------- *}
+
+  {* ----- results by builds -------------------------------------- *}
 	<h1>{$labels.title_metrics_x_build}</h1>
 	{if $gui->displayBuildMetrics}
 	<table class="simple_tableruler sortable" style="text-align: center; margin-left: 0px;">
@@ -86,6 +87,37 @@ Purpose: smarty template - show Test Results and Metrics
 	{if $gui->buildMetricsFeedback != ''}
 		<p class="italic">{$gui->buildMetricsFeedback|escape}</p>
 	{/if}
+
+  {* NEW *}
+  {if $gui->displayBuildByPlatMetrics}
+    {if $gui->showPlatforms}
+      {foreach from=$gui->platformSet key=platId item=pname}
+        {if isset($gui->statistics->buildByPlatMetrics[$platId]) }
+            {$tit = $labels.title_res_by_build_on_plat}
+            {$tit = "$tit $pname"}         
+            {include file="results/inc_results_show_table.tpl"
+               args_title=$tit
+               args_column_for_total='total_assigned'
+               args_first_column_header=$labels.th_build
+               args_first_column_key='build_name'
+               args_show_percentage=true
+               args_column_definition=
+                 $gui->columnsDefinition->buildByPlatMetrics
+               args_column_data=$gui->statistics->buildByPlatMetrics[$platId] 
+            }
+        {/if}    
+      {/foreach}
+    {/if}
+  {/if}
+
+
+
+  {* Display message explaining that only Active Builds with test cases *}
+  {* assigned to tester will be displayed *}
+  {if $gui->buildMetricsFeedback != ''}
+    <p class="italic">{$gui->buildMetricsFeedback|escape}</p>
+  {/if}
+
 	<br />
     {if $gui->showPlatforms}
       <h1>{$labels.title_res_by_platform}</h1>
@@ -131,7 +163,6 @@ Purpose: smarty template - show Test Results and Metrics
              args_show_percentage=true
              args_column_definition=$gui->columnsDefinition->testsuites
              args_column_data=$gui->statistics->testsuites}
-    }
     {/if}
 
     {if $gui->columnsDefinition->testsuites != ""}
@@ -169,6 +200,7 @@ Purpose: smarty template - show Test Results and Metrics
           {/if} 
         {/foreach}
       {else}  
+
         {include file="results/inc_results_show_table.tpl"
                args_title=$labels.title_report_tc_priorities
                args_first_column_header=$labels.priority

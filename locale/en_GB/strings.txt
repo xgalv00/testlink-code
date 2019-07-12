@@ -3969,4 +3969,6 @@ $TLS_title_res_by_tl_testsuite_on_plat =
 
 $TLS_title_res_by_tl_testsuite = "Results by Top Level Test Suite";
 
+$TLS_title_res_by_build_on_plat = "Results by Build on Platform:";
+
 // ----- END ------------------------------------------------------------------

@@ -4,9 +4,6 @@
  * This script is distributed under the GNU General Public License 2 or later.
  * 
  * @filesource resultsGeneral.php
- * @author	Martin Havlat <havlat at users.sourceforge.net>
- * 
- * Show Test Results over all Builds.
  * 
  */
 require('../../config.inc.php');
@@ -104,12 +101,16 @@ if(is_null($tsInf)) {
   // Build by Platform
   $colDefinition = null;
   $results = null;
-  if($gui->do_report['status_ok']) {
-    $gui->statistics->buildByPlatStatus = 
-      $metricsMgr->getBuildByPlatStatusForRender($args->tplan_id);
-      
-    $gui->displayBuildByPlatStatus = 
-      !is_null($gui->statistics->buildByPlatStatus);
+  if($gui->do_report['status_ok']) {     
+    $o = $metricsMgr->getBuildByPlatStatusForRender($args->tplan_id);
+
+    $gui->statistics->buildByPlatMetrics = $o->info; 
+    $gui->statistics->buildByPlatMetrics->colDefinition = 
+        $o->colDefinition;
+    $gui->columnsDefinition->buildByPlatMetrics = $o->colDefinition;
+
+    $gui->displayBuildByPlatMetrics = 
+      !is_null($gui->statistics->buildByPlatMetrics); 
   }  
 
 
@@ -207,8 +208,7 @@ function buildMailCfg(&$guiObj)
 }
 
 
-function initializeGui(&$dbHandler,$argsObj,&$tplanMgr)
-{
+function initializeGui(&$dbHandler,$argsObj,&$tplanMgr) {
   $gui = new stdClass();
   $gui->title = lang_get('title_gen_test_rep');
   $gui->do_report = array();
