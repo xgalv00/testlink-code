@@ -221,8 +221,7 @@ class tlTestPlanMetrics extends testplan
       // amount of all executed tc with any priority before target_date / all test cases
       $item['percentage_completed'] = $this->get_percentage($item['tc_total'], $item['tc_completed']);
 
-      foreach( $checks as $key => $item_key)
-      {
+      foreach( $checks as $key => $item_key) {
         // add 1 decimal places to expected percentages
         $item[$checks[$key]] = number_format($item[$checks[$key]], 1);
               
@@ -498,12 +497,12 @@ class tlTestPlanMetrics extends testplan
           
           $totalRun += $statusVerbose == 'not_run' ? 0 : $rf[$statusVerbose]['qty'];
         }
-        $renderObj->info[$buildID]['percentage_completed'] =  number_format(100 * 
-                                                             ($totalRun / $renderObj->info[$buildID][$totalKey]),1);
+        $renderObj->info[$buildID]['percentage_completed'] =  
+          number_format(100 * 
+            ($totalRun / $renderObj->info[$buildID][$totalKey]),1);
       }
          
-      foreach($code_verbose as $human)
-      {
+      foreach($code_verbose as $human) {
         $l10n = isset($labels[$human]) ? lang_get($labels[$human]) : lang_get($human); 
         $renderObj->colDefinition[$human]['qty'] = $l10n;
         $renderObj->colDefinition[$human]['percentage'] = '[%]';
@@ -1462,7 +1461,7 @@ class tlTestPlanMetrics extends testplan
           }
         }
       } 
-      
+
     } else {
 
       // OLD WAY
@@ -2910,12 +2909,6 @@ class tlTestPlanMetrics extends testplan
     $opt = array('groupByPlatform' => true);  
     $metrics = $this->getExecCountersByBuildExecStatus($id,null,$opt);
 
-    echo 'NEW Z';  
-    echo '<pre>';
-    //var_dump($metrics['active_builds']);
-    echo '</pre>';
-    //die();
-
     // Creating item list this way will generate a row also for
     // ACTIVE BUILDS were ALL TEST CASES HAVE NO TESTER ASSIGNMENT
     // $buildList = array_keys($metrics['active_builds']);
@@ -2947,9 +2940,8 @@ class tlTestPlanMetrics extends testplan
               $rf[$code4h]['percentage'] = 
                 number_format(100 * ($rf[$code4h]['qty'] / $yo[$totalKey]),1);
             }
-            
-            $totalRun += 
-              $code4h == 'not_run' ? 0 : $rf[$code4h]['qty'];
+            //$totalRun += 
+            //  $code4h == 'not_run' ? 0 : $rf[$code4h]['qty'];
           }        
         }
       }  
@@ -2960,6 +2952,28 @@ class tlTestPlanMetrics extends testplan
         $renObj->colDefinition[$human]['percentage'] = '[%]';
       }
   
+      // Last step: get completness percentages
+      $platList = array_keys($renObj->info); 
+      $tk = 'total_assigned';
+      foreach($platList as $platID) {
+        $itemList = array_keys($renObj->info[$platID]);
+        foreach($itemList as $itemID) {
+          if( isset($renObj->info[$platID]) ) {
+            $totalRun = 0;
+            $rf = &$renObj->info[$platID][$itemID]['details'];
+            $doPerc = ($renObj->info[$platID][$itemID][$tk] > 0); 
+            foreach($codeSet as $sCode => $c4human) {
+              $totalRun += ($c4human == 'not_run' ? 0 : 
+                            $rf[$c4human]['qty']);
+            }
+            if($doPerc) {
+              $renObj->info[$platID][$itemID]['percentage_completed'] = 
+                number_format(100 * 
+                  ($totalRun/$renObj->info[$platID][$itemID][$tk]),1);
+            }                                             
+          }
+        }
+      }
     }
     return $renObj;
   }

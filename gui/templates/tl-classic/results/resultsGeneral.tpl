@@ -17,14 +17,15 @@ Purpose: smarty template - show Test Results and Metrics
          th_build, th_tc_assigned, th_perc_completed, from, until,
          info_res_by_top_level_suites, info_report_tc_priorities, info_res_by_platform,send_by_email_to_me,
          info_report_milestones_prio, info_report_milestones_no_prio, info_res_by_kw,send_test_report,
-         info_gen_test_rep,title_res_by_kw_on_plat,title_res_by_prio_on_plat,test_suite,title_res_by_tl_testsuite_on_plat,title_res_by_prio,title_res_by_tl_testsuite,title_res_build,title_res_by_build_on_plat'}
+         info_gen_test_rep,title_res_by_kw_on_plat,title_res_by_prio_on_plat,test_suite,title_res_by_tl_testsuite_on_plat,title_res_by_prio,title_res_by_tl_testsuite,title_res_build,title_res_by_build_on_plat,export_as_spreadsheet'}
 
 {include file="inc_head.tpl"}
 <body>
 <h1 class="title">{$gui->title}</h1>
 
-
-<form name="send_by_email_to_me" id="send_by_email_to_me"
+<div style="display: flex;">
+<form name="send_by_email_to_me" 
+      id="send_by_email_to_me"
       action="{$gui->actionSendMail}" method="POST">
   &nbsp;&nbsp;
   <input hidden name="sendByEmail" value="1">
@@ -33,6 +34,14 @@ Purpose: smarty template - show Test Results and Metrics
          src="{$tlImages.email}" title="{$labels.send_by_email_to_me}"
          onclick="submit();">
 </form>
+
+<form name="exportSpreadsheet" id="exportSpreadsheet" method="POST"
+      action={$gui->actionSpreadsheet}>
+  &nbsp;&nbsp;
+  <input type="image" name="exportSpreadSheet" id="exportSpreadSheet" 
+         src="{$tlImages.export_excel}" title="{$labels.export_as_spreadsheet}">
+</form>
+</div>
 
 {if null != $gui->mailFeedBack && $gui->mailFeedBack->msg != ""}
   <p class='info'>{$gui->mailFeedBack->msg}</p>
@@ -52,6 +61,25 @@ Purpose: smarty template - show Test Results and Metrics
    {$labels.report_tcase_platorm_relationship}
    <hr>
   {/if}  
+
+
+    <br>
+    {if $gui->showPlatforms}
+      <h1>{$labels.title_res_by_platform}</h1>
+      {include file="results/inc_results_show_table.tpl"
+             args_title=''
+             args_first_column_header=$labels.th_platform
+             args_first_column_key='name'
+             args_show_percentage=true
+             args_column_definition=$gui->columnsDefinition->platform
+             args_column_data=$gui->statistics->platform}
+      
+      {if $gui->columnsDefinition->platform != ""}
+        <p class="italic">{$labels.info_res_by_platform}</p>
+        <br />
+      {/if}
+    {/if}
+
 
   {* ----- results by builds -------------------------------------- *}
 	<h1>{$labels.title_metrics_x_build}</h1>
@@ -120,22 +148,6 @@ Purpose: smarty template - show Test Results and Metrics
   {/if}
 
 	<br />
-    {if $gui->showPlatforms}
-      <h1>{$labels.title_res_by_platform}</h1>
-      {include file="results/inc_results_show_table.tpl"
-             args_title=''
-             args_first_column_header=$labels.th_platform
-             args_first_column_key='name'
-             args_show_percentage=true
-             args_column_definition=$gui->columnsDefinition->platform
-             args_column_data=$gui->statistics->platform}
-      
-      {if $gui->columnsDefinition->platform != ""}
-        <p class="italic">{$labels.info_res_by_platform}</p>
-        <br />
-      {/if}
-    {/if}
-    
 
   	{* ----- results by test suites ------------------- *}
   	{* by TestSuite *}
