@@ -34,8 +34,8 @@ Purpose: smarty template - show Test Results and Metrics
          onclick="submit();">
 </form>
 
-{if $mailFeedBack->msg != ""}
-  <p class='info'>{$mailFeedBack->msg}</p>
+{if null != $gui->mailFeedBack && $gui->mailFeedBack->msg != ""}
+  <p class='info'>{$gui->mailFeedBack->msg}</p>
 {/if}
 
 
