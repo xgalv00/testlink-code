@@ -957,22 +957,12 @@ class tlTestPlanMetrics extends testplan
                 $out[$platID][$hitOn][$statusCode]['exec_qty'] += 
                   $rs[$platID][$urgImpVal][$statusCode]['exec_qty'];
               }
-              //echo '<br>';
-              //echo '<pre>';
-              //var_dump('$out[$hitOn]:' . $hitOn,$out[$platID][$hitOn]);
-              //echo '</pre>';
-              //echo '<br>';
-
               if( !isset($totals[$platID][$hitOn]) ) {
                 $totals[$hitOn] = array('priority_level' => $hitOn, 
                                         'qty' => 0);
               }
               $totals[$platID][$hitOn]['qty'] += 
                 $rs[$platID][$urgImpVal][$statusCode]['exec_qty'];
-            
-              //echo '<pre>';
-              //var_dump('$totals[$hitOn]:' . $hitOn,$totals[$platID][$hitOn]);
-              //echo '</pre>';
             }
           }
         }
@@ -1427,9 +1417,6 @@ class tlTestPlanMetrics extends testplan
     $wp = isset($opt['groupByPlatform']) && $opt['groupByPlatform'];
 
     if( $wp ) {
-
-
-
       $plat2loop = array_keys($rx->info);
       foreach($key2loop as $tsuite_id) {
         // (count() == 1) => is a TOP LEVEL SUITE, 
@@ -1438,7 +1425,8 @@ class tlTestPlanMetrics extends testplan
         
         if( count($staircase[$tsuite_id]) > 1) {
           // element at position 1 is a TOP LEVEL SUITE
-          $topSuiteID = &$staircase[$tsuite_id][1];
+          //$topSuiteID = &$staircase[$tsuite_id][1];
+          $topSuiteID = $staircase[$tsuite_id][1];
           $initName = false;
         } else {
           $topSuiteID = $tsuite_id;
@@ -1462,16 +1450,18 @@ class tlTestPlanMetrics extends testplan
           
           // Loop to get executions counters
           $r2d2 = &$rx->info[$platId][$tsuite_id];
-          foreach($r2d2['details'] as $code => &$elem) {
-            $renderObj->info[$platId][$topSuiteID]['details'][$code]
-              ['qty'] += $elem['qty'];    
-            $renderObj->info[$platId][$topSuiteID]['total_tc'] += 
-              $elem['qty'];
+          if( null !== $r2d2 ) {
+            foreach($r2d2['details'] as $code => &$elem) {
+              $renderObj->info[$platId][$topSuiteID]['details'][$code]
+                ['qty'] += $elem['qty'];    
+              $renderObj->info[$platId][$topSuiteID]['total_tc'] += 
+                $elem['qty'];
 
-            if( $code != 'not_run' ) {
-              $execQty[$platId][$topSuiteID] += $elem['qty'];
+              if( $code != 'not_run' ) {
+                $execQty[$platId][$topSuiteID] += $elem['qty'];
+              }
             }
-          }
+          }  
         }  
       }
 

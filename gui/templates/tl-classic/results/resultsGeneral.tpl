@@ -17,7 +17,7 @@ Purpose: smarty template - show Test Results and Metrics
          th_build, th_tc_assigned, th_perc_completed, from, until,
          info_res_by_top_level_suites, info_report_tc_priorities, info_res_by_platform,send_by_email_to_me,
          info_report_milestones_prio, info_report_milestones_no_prio, info_res_by_kw,send_test_report,
-         info_gen_test_rep,title_res_by_kw_on_plat,title_res_by_prio_on_plat,test_suite,title_res_by_tl_testsuite_on_plat,title_res_by_prio,title_res_by_tl_testsuite'}
+         info_gen_test_rep,title_res_by_kw_on_plat,title_res_by_prio_on_plat,test_suite,title_res_by_tl_testsuite_on_plat,title_res_by_prio,title_res_by_tl_testsuite,title_res_build,title_res_by_build_on_plat'}
 
 {include file="inc_head.tpl"}
 <body>
@@ -91,6 +91,7 @@ Purpose: smarty template - show Test Results and Metrics
   {* NEW *}
   {if $gui->displayBuildByPlatMetrics}
     {if $gui->showPlatforms}
+      <h1>{$labels.title_res_build}</h1>
       {foreach from=$gui->platformSet key=platId item=pname}
         {if isset($gui->statistics->buildByPlatMetrics[$platId]) }
             {$tit = $labels.title_res_by_build_on_plat}

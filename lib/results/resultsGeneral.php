@@ -104,9 +104,8 @@ if(is_null($tsInf)) {
   if($gui->do_report['status_ok']) {     
     $o = $metricsMgr->getBuildByPlatStatusForRender($args->tplan_id);
 
+    $gui->statistics->buildByPlatMetrics = new stdClass();
     $gui->statistics->buildByPlatMetrics = $o->info; 
-    $gui->statistics->buildByPlatMetrics->colDefinition = 
-        $o->colDefinition;
     $gui->columnsDefinition->buildByPlatMetrics = $o->colDefinition;
 
     $gui->displayBuildByPlatMetrics = 
