@@ -1448,7 +1448,24 @@ class tlTestPlanMetrics extends testplan
         }  
       }
 
+      // Last step: get percentages
+      foreach($renderObj->info as $platID => &$tsuiteMetrics) {
+        foreach($tsuiteMetrics as $tsuite_id => &$elem) {
+          if( $execQty[$platID][$tsuite_id] > 0 ) {
+            $elem['percentage_completed'] = number_format( 100 * 
+              ($execQty[$platID][$tsuite_id] / $elem['total_tc']),1);
+          }  
+          if( $elem['total_tc'] > 0 ) {
+            foreach($elem['details'] as $code => &$yumyum) {
+              $yumyum['percentage'] = number_format( 100 * ($yumyum['qty'] / $elem['total_tc']),1);    
+            }
+          }
+        }
+      } 
+      
     } else {
+
+      // OLD WAY
       foreach($key2loop as $tsuite_id) {
         // (count() == 1) => is a TOP LEVEL SUITE, 
         // only element contains Root node, is useless for this algorithm

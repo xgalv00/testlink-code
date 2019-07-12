@@ -108,6 +108,12 @@ if(is_null($tsInf)) {
     $gui->statistics->buildByPlatMetrics = $o->info; 
     $gui->columnsDefinition->buildByPlatMetrics = $o->colDefinition;
 
+    //echo '<pre>';
+    //var_dump($o->info);
+    //echo '</pre>';
+    
+    //die();
+
     $gui->displayBuildByPlatMetrics = 
       !is_null($gui->statistics->buildByPlatMetrics); 
   }  
