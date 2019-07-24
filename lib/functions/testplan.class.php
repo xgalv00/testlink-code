@@ -8011,12 +8011,8 @@ class build_mgr extends tlObject {
    * @param integer $id
    * @return integer status code
    * 
-   * @internal revisions:
-   * @since 1.9.9
-   * 
    */
-  function delete($id)
-  {
+  function delete($id) {
     $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
 
     $safe_id = intval($id);
@@ -8098,8 +8094,7 @@ class build_mgr extends tlObject {
              is_open: build open status
              testplan_id
   */
-  function get_by_id($id,$opt=null)
-  {
+  function get_by_id($id,$opt=null) {
     $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
     
     $my = array('options' => 
@@ -8109,8 +8104,7 @@ class build_mgr extends tlObject {
     $safe_id = intval($id);  
     
     $sql = "/* {$debugMsg} */";
-    switch($my['options']['output'])
-    {
+    switch($my['options']['output']) {
       case 'minimun':
         $sql .= " SELECT id,is_open,active ";  
       break;
@@ -8126,8 +8120,7 @@ class build_mgr extends tlObject {
     }
     
     $sql .= " FROM {$this->tables['builds']} WHERE id = {$safe_id} ";
-    if(!is_null($my['options']['tplan_id']) && ($safe_tplan = intval($my['options']['tplan_id'])) > 0)
-    {
+    if(!is_null($my['options']['tplan_id']) && ($safe_tplan = intval($my['options']['tplan_id'])) > 0) {
       $sql .= " AND testplan_id = {$safe_tplan} ";
     }
     
