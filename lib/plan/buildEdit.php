@@ -501,31 +501,32 @@ function doUpdate(&$argsObj,&$buildMgr,&$tplanMgr,$dateFormat)
   $oldname = $oldObjData['name'];
 
   $check = crossChecks($argsObj,$tplanMgr,$dateFormat);
-  if($check->status_ok)
-  {
+  if($check->status_ok) {
     $user_feedback = lang_get("cannot_update_build");
-    if ($buildMgr->update($argsObj->build_id,$argsObj->build_name,$argsObj->notes,
-                          $argsObj->is_active,$argsObj->is_open,$argsObj->release_date))
-    {
+
+    $attr = array();
+    $k2c = array('release_date','release_candidate',
+                 'is_active','is_open','copy_tester_assignments',
+                 'commit_id','tag','branch');
+    foreach( $k2c as $pp ) {
+      $attr[$pp] = $argsObj->$pp;
+    }    
+
+    if ($buildMgr->update($argsObj->build_id,$argsObj->build_name,$argsObj->notes,$attr) ) {
       $cf_map = $buildMgr->get_linked_cfields_at_design($argsObj->build_id,$argsObj->testprojectID);
       $buildMgr->cfield_mgr->design_values_to_db($_REQUEST,$argsObj->build_id,$cf_map,null,'build');
 
-      if( $argsObj->closed_on_date == '')
-      {
+      if( $argsObj->closed_on_date == '') {
         $argsObj->closed_on_date = mktime(0, 0, 0, date("m")  , date("d"), date("Y"));
       }
         
-      if($argsObj->is_open == 1)
-      {
+      if($argsObj->is_open == 1) {
         $targetDate=null;
-      } 
-      else
-      {
+      } else {
         $targetDate=date("Y-m-d",$argsObj->closed_on_date);    
       }
       $buildMgr->setClosedOnDate($argsObj->build_id,$targetDate);    
  
-        
       $op->user_feedback = '';
       $op->notes = '';
       $op->template = null;

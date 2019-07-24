@@ -7972,9 +7972,6 @@ class build_mgr extends tlObject {
       }  
     }
     $build->release_date = trim($build->release_date);
-    
-    echo '<br><b>';
-    var_dump($build); echo '<b>';
     $ps = 'prepare_string';
     $sql = " INSERT INTO {$this->tables['builds']} " .
            " (testplan_id,name,notes,
@@ -8068,9 +8065,22 @@ class build_mgr extends tlObject {
 
     rev :
   */
-  function update($id,$name,$notes,$active=null,$open=null,$release_date='',$closed_on_date='') {
+  function update($id,$name,$notes,$attr=null) {
+
+    $members = array('is_active' => null, 'is_open' => null,
+                     'release_date' => '', 'closed_on_date=' => '',
+                     'commit_id' => '', 'tag' => '', 
+                     'branch' => '', 'release_candidate' => '');
+
+    $members = array_merge($members,(array)$attr);
+
+ /*   echo '<pre>';
+    var_dump($attr);
+    var_dump($members);
+    echo '</pre>';
+    die(); */
     $closure_date = '';
-    $targetDate=trim($release_date);
+    $targetDate = trim($members['release_date']);
     $sql = " UPDATE {$this->tables['builds']} " .
            " SET name='" . $this->db->prepare_string($name) . "'," .
            "     notes='" . $this->db->prepare_string($notes) . "'";
@@ -8080,17 +8090,25 @@ class build_mgr extends tlObject {
     } else {
       $sql .= ",release_date='" . $this->db->prepare_string($targetDate) . "'";
     }
-    if( !is_null($active) ) {
-      $sql .=" , active=" . intval($active);
+
+    if( !is_null($members['is_active']) ) {
+      $sql .=" , active=" . intval($members['is_active']);
     }
     
-    if( !is_null($open) ) {
-      $open_status=intval($open) ? 1 : 0; 
+    if( !is_null($members['is_open']) ) {
+      $open_status=intval($members['is_open']) ? 1 : 0; 
       $sql .=" , is_open=" . $open_status;
       
       if($open_status == 1) {
         $closure_date = ''; 
       }
+    }
+
+    // New attributes
+    $ps = 'prepare_string';
+    $ax = array('commit_id','tag','branch','release_candidate');
+    foreach( $ax as $fi ) {
+      $sql .= ", $fi='" . $this->db->$ps($members[$fi]) . "'";
     }
     
     if($closure_date == '') {
@@ -8420,27 +8438,7 @@ class build_mgr extends tlObject {
     return $cf_smarty;
   }
 
-  /** 
-   *
-   *
-   */
-  function NOcreateFromObject($buildObj) {
-
-    $item = $buildObj;
-    $optProp = array('notes' => '', 'active' => 1, 'open' => 1,
-                     'release_date' => '');
-
-    foreach($optProp as $prop => $defa) {
-      if( !property_exists($item, $prop) ) {
-        $item->$prop = $defa;
-      }
-    }
-    
-    $id = $this->create($buildObj->tplan_id,$buildObj->name,
-                        $item->notes,$item->active,$item->open,
-                        $item->release_date);
-    return $id;
-  }
+ 
 
   /**
    * Build Manager
