@@ -250,8 +250,8 @@ function edit(&$argsObj,&$buildMgr,$dateFormat) {
   returns: object with part of gui configuration
 
 */
-function create(&$argsObj)
-{
+function create(&$argsObj) {
+
   $op = new stdClass();
   $op->operation_descr = lang_get('title_build_create');
   $op->buttonCfg = new stdClass();
@@ -366,8 +366,7 @@ function renderGui(&$smartyObj,&$argsObj,&$tplanMgr,$templateCfg,$owebeditor,&$g
 
   @internal revisions
 */
-function doCreate(&$argsObj,&$buildMgr,&$tplanMgr,$dateFormat) //,&$smartyObj)
-{
+function doCreate(&$argsObj,&$buildMgr,&$tplanMgr,$dateFormat) {
   $op = new stdClass();
   $op->operation_descr = '';
   $op->user_feedback = '';
@@ -376,31 +375,42 @@ function doCreate(&$argsObj,&$buildMgr,&$tplanMgr,$dateFormat) //,&$smartyObj)
   $op->status_ok = 0;
   $op->buttonCfg = null;
   $check = crossChecks($argsObj,$tplanMgr,$dateFormat);
-  $targetDate=null;
-  if($check->status_ok)
-  {
+  $targetDate = null;
+  if($check->status_ok) {
     $user_feedback = lang_get("cannot_add_build");
+
+    $oBuild = new stdClass();
+    $prop = array('tplan_id','release_date','notes',
+                  'commit_id', 'tag',
+                  'branch', 'release_candidate',
+                  'is_active','is_open','creation_ts');
+
+    $oBuild->name = $argsObj->build_name;
+    foreach( $prop as $pp ) {
+      $oBuild->$pp = $argsObj->$pp;
+    }
+
+    /*
     $buildID = $buildMgr->create($argsObj->tplan_id,$argsObj->build_name,$argsObj->notes,
-                                 $argsObj->is_active,$argsObj->is_open,$argsObj->release_date);
-    if ($buildID)
-    {
+    $argsObj->is_active,$argsObj->is_open,$argsObj->release_date);
+    */
+    $buildID = $buildMgr->createFromObject($oBuild);
+
+    if ($buildID) {
       $cf_map = $buildMgr->get_linked_cfields_at_design($buildID,$argsObj->testprojectID);
       $buildMgr->cfield_mgr->design_values_to_db($_REQUEST,$buildID,$cf_map,null,'build');
 
-      if($argsObj->is_open == 1)
-      {
-        $targetDate=null;
-      } 
-      else
-      {
+      if($argsObj->is_open == 1) {
+        $targetDate = null;
+      } else {
         $targetDate=date("Y-m-d",$argsObj->closed_on_date);    
       }
       $buildMgr->setClosedOnDate($buildID,$targetDate);    
       
-      if ($argsObj->copy_tester_assignments && $argsObj->source_build_id) 
-      {
-        if(!is_null($argsObj->exec_status_filter) && is_array($argsObj->exec_status_filter))
-        {
+      if ($argsObj->copy_tester_assignments && 
+          $argsObj->source_build_id) {
+        if(!is_null($argsObj->exec_status_filter) && 
+           is_array($argsObj->exec_status_filter)) {
           $buildSet[] = $argsObj->source_build_id;
 
           $execVerboseDomain = config_get('results');
@@ -412,48 +422,38 @@ function doCreate(&$argsObj,&$buildMgr,&$tplanMgr,$dateFormat) //,&$smartyObj)
           $platformSet = $tplanMgr->getPlatforms($argsObj->tplan_id,$getOpt);
           
           $caOpt['keep_old_assignments'] = true;
-          foreach($platformSet as $platform_id => $pname)
-          {
+          foreach($platformSet as $platform_id => $pname) {
             $glf['filters']['platform_id'] = $platform_id; 
-            foreach($argsObj->exec_status_filter as $ec)
-            {
-              switch($execVerboseDomain[$ec])
-              {
+            foreach($argsObj->exec_status_filter as $ec) {
+              switch($execVerboseDomain[$ec]) {
                 case 'not_run':
-                  $tcaseSet = $tplanMgr->getHitsNotRunForBuildAndPlatform($argsObj->tplan_id,
-                                                                          $platform_id,
-                                                                          $argsObj->source_build_id);
+                  $tcaseSet = $tplanMgr->getHitsNotRunForBuildAndPlatform(
+                    $argsObj->tplan_id,$platform_id,$argsObj->source_build_id);
                   
                 break;
 
                 default:
-                  $tcaseSet = $tplanMgr->getHitsSingleStatusFull($argsObj->tplan_id,
-                                                                 $platform_id,
-                                                                 $ec,$buildSet);
+                  $tcaseSet = $tplanMgr->getHitsSingleStatusFull(
+                    $argsObj->tplan_id,$platform_id,$ec,$buildSet);
                 break;            
               }
-              if(!is_null($tcaseSet))
-              {
+
+              if(!is_null($tcaseSet)){
                 $targetSet = array_keys($tcaseSet);
                 $features = $tplanMgr->getLinkedFeatures($argsObj->tplan_id,$glf['filters']);
                 $caOpt['feature_set'] = null;
-                foreach($targetSet as $tcase_id)
-                {
+                foreach($targetSet as $tcase_id) {
                   $caOpt['feature_set'][] = 
                          $features[$tcase_id][$glf['filters']['platform_id']]['feature_id'];
                 }  
-                $tplanMgr->assignment_mgr->copy_assignments($argsObj->source_build_id, 
-                                                            $buildID, $argsObj->userID,$caOpt);
+                $tplanMgr->assignment_mgr->copy_assignments(
+                  $argsObj->source_build_id, $buildID, $argsObj->userID,$caOpt);
               }  
-              
             }  
           }  
-
-        }  
-        else
-        {
-          $tplanMgr->assignment_mgr->copy_assignments($argsObj->source_build_id, 
-                                                      $buildID, $argsObj->userID);
+        } else {
+          $tplanMgr->assignment_mgr->copy_assignments($argsObj->source_build_id,
+            $buildID, $argsObj->userID);
         }  
       }
           
@@ -461,20 +461,18 @@ function doCreate(&$argsObj,&$buildMgr,&$tplanMgr,$dateFormat) //,&$smartyObj)
       $op->notes = '';
       $op->template = null;
       $op->status_ok = 1;
-      logAuditEvent(TLS("audit_build_created",$argsObj->testprojectName,$argsObj->tplan_name,$argsObj->build_name),
-                    "CREATE",$buildID,"builds");
+      logAuditEvent(TLS("audit_build_created",$argsObj->testprojectName,
+        $argsObj->tplan_name,$argsObj->build_name),
+        "CREATE",$buildID,"builds");
     }
   }
 
-  if(!$op->status_ok)
-  {
+  if(!$op->status_ok) {
     $op->buttonCfg = new stdClass();
     $op->buttonCfg->name = "do_create";
     $op->buttonCfg->value = lang_get('btn_create');
     $op->user_feedback = $check->user_feedback;
-  }
-  elseif($argsObj->copy_to_all_tplans)
-  {
+  } elseif($argsObj->copy_to_all_tplans) {
     doCopyToTestPlans($argsObj,$buildMgr,$tplanMgr);
   }
   return $op;

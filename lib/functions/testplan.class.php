@@ -269,13 +269,11 @@ class testplan extends tlObjectWithAttachments
    * with different id but same name
    *
    **/
-  function checkNameExistence($name,$tprojectID,$id=0)
-  {
+  function checkNameExistence($name,$tprojectID,$id=0) {
     $check_op['msg'] = '';
     $check_op['status_ok'] = 1;
        
-    if($this->get_by_name($name,intval($tprojectID), array('id' => intval($id))) )
-    {
+    if($this->get_by_name($name,intval($tprojectID), array('id' => intval($id))) ) {
       $check_op['msg'] = sprintf(lang_get('error_product_name_duplicate'),$name);
       $check_op['status_ok'] = 0;
     }
@@ -7842,7 +7840,6 @@ class build_mgr extends tlObject {
   var $db;
   var $cfield_mgr;
 
-
   /** 
    * Build Manager class constructor 
    * 
@@ -7904,6 +7901,112 @@ class build_mgr extends tlObject {
 
 
 
+  /**
+   * Build Manager 
+   *
+   * createFromObject
+   */
+  function createFromObject($item,$opt=null) {
+    $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
+
+    var_dump($item);
+
+    try {
+      // mandatory checks
+      if(strlen($item->name)==0) {
+        throw new Exception('Build - Empty name is not allowed');      
+      }  
+    
+      // what checks need to be done ?
+      // 1. does test plan exist?
+      $item->tplan_id = intval($item->tplan_id);
+      $tm = new tree($this->db);
+      $ntv = array_flip($tm->get_available_node_types());
+      $pinfo = $tm->get_node_hierarchy_info($item->tplan_id);
+      if(is_null($pinfo) || 
+         $ntv[$pinfo['node_type_id']] != 'testplan') {
+        throw new Exception(
+          "Build - Test Plan ID {$item->tplan_id} does not exist");    
+      }  
+
+      // 2. there is NO other build on test plan with same name
+      $name = trim($item->name);
+      $op = $this->checkNameExistence($item->tplan_id,$name);
+      if(!$op['status_ok']) {
+        throw new Exception(
+          "Build name {$name} is already in use on Test Plan {$item->tplan_id}");      
+      }  
+    } catch (Exception $e) {
+      throw $e;  // rethrow
+    }
+
+    // seems OK => check all optional attributes
+    $build = new stdClass();
+    $prop = array('release_date' => '','notes' => '',
+                  'commit_id' => '', 'tag' => '',
+                  'branch' => '', 'release_candidate' => '',
+                  'is_active' => 1,'is_open' => 1,
+                  'creation_ts' => $this->db->db_now());
+
+    $build->name = $item->name;
+    $build->tplan_id = $item->tplan_id;
+    foreach( $prop as $nu => $value  ) {      
+      $build->$nu = $value;
+      if( property_exists($item, $nu) ) {
+        switch( $nu ) {
+          case 'creation_ts':
+            if(null != $item->$nu && '' == trim($item->$nu) ) {
+              $build->$nu = $item->$nu;
+            }
+          break;
+          
+          case 'is_active':
+          case 'is_open':
+            $build->$nu = intval($item->$nu) > 0 ? 1 : 0;
+          break;
+
+          default:
+            $build->$nu = $item->$nu;
+          break; 
+        }
+      }  
+    }
+    $build->release_date = trim($build->release_date);
+    
+    echo '<br><b>';
+    var_dump($build); echo '<b>';
+    $ps = 'prepare_string';
+    $sql = " INSERT INTO {$this->tables['builds']} " .
+           " (testplan_id,name,notes,
+              commit_id,tag,branch,release_candidate,
+              active,is_open,creation_ts,release_date) " .
+           " VALUES ('". $build->tplan_id . "','" . 
+             $this->db->$ps($build->name) . "','" .
+             $this->db->$ps($build->notes) . "',";
+
+    $sql .=  "'" . $this->db->$ps($build->commit_id) . "'," . 
+             "'" . $this->db->$ps($build->tag) . "'," .
+             "'" . $this->db->$ps($build->branch) . "'," .
+             "'" . $this->db->$ps($build->release_candidate) . "',";
+
+    $sql .= "{$build->is_active},{$build->is_open},{$build->creation_ts}";
+
+    if($build->release_date == '') {
+      $sql .= ",NULL)";
+    } else {
+      $sql .= ",'" . $this->db->$ps($build->release_date) . "')";
+    }
+
+    $id = 0;
+    $result = $this->db->exec_query($sql);
+    if ($result) {
+      $id = $this->db->insert_id($this->tables['builds']);
+    }
+    
+    return $id;
+  }
+
+
   /*
     Build Manager 
 
@@ -7930,12 +8033,10 @@ class build_mgr extends tlObject {
            " VALUES ('". $tplan_id . "','" . $this->db->prepare_string($name) . "','" .
            $this->db->prepare_string($notes) . "',";
 
-    if($targetDate == '')
-    {
+    if($targetDate == '') {
       $sql .= "NULL,";
     }       
-    else
-    {
+    else {
       $sql .= "'" . $this->db->prepare_string($targetDate) . "',";
     }
     
@@ -7943,8 +8044,7 @@ class build_mgr extends tlObject {
 
     $id = 0;
     $result = $this->db->exec_query($sql);
-    if ($result)
-    {
+    if ($result) {
       $id = $this->db->insert_id($this->tables['builds']);
     }
     
@@ -8324,7 +8424,7 @@ class build_mgr extends tlObject {
    *
    *
    */
-  function createFromObject($buildObj) {
+  function NOcreateFromObject($buildObj) {
 
     $item = $buildObj;
     $optProp = array('notes' => '', 'active' => 1, 'open' => 1,
@@ -8342,7 +8442,36 @@ class build_mgr extends tlObject {
     return $id;
   }
 
+  /**
+   * Build Manager
+   *
+   */
+  function checkNameExistence($tplan_id,$build_name,$build_id=null,
+                              $caseSens=0) {
+    $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
 
+    $sql = " /* $debugMsg */ SELECT id, name, notes " .
+      " FROM {$this->tables['builds']} " .
+      " WHERE testplan_id = {$tplan_id} ";
+    
+    if($caseSens) {
+      $sql .= " AND name=";
+    } else {
+      $build_name = strtoupper($build_name);
+      $sql .= " AND UPPER(name)=";
+    }
+    $sql .= "'" . $this->db->prepare_string($build_name) . "'";
+    
+    if( !is_null($build_id) ) {
+      $sql .= " AND id <> " . $this->db->prepare_int($build_id);
+    }
+
+    $result = $this->db->exec_query($sql);
+    $rn = $this->db->num_rows($result);
+    $status = array();
+    $status['status_ok'] = $rn == 0 ? 1 : 0;    
+    return $status;
+  }
 
 
 
