@@ -7909,8 +7909,6 @@ class build_mgr extends tlObject {
   function createFromObject($item,$opt=null) {
     $debugMsg = 'Class:' . __CLASS__ . ' - Method: ' . __FUNCTION__;
 
-    var_dump($item);
-
     try {
       // mandatory checks
       if(strlen($item->name)==0) {
