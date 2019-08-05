@@ -1,0 +1,3 @@
+deployments:
+  default:
+    dockerimage: pensiero/apache-php-mysql:latest
